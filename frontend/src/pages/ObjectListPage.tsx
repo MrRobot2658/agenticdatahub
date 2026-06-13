@@ -14,8 +14,7 @@ export default function ObjectListPage() {
   if (cfg.kind === "segment") return <SegmentsPage />;
 
   return (
-    <Layout title={cfg.label}>
-      <p className="mb-5 text-sm text-gray-500">{cfg.desc}</p>
+    <Layout title={cfg.label} subtitle={cfg.desc}>
       <UnifiedFilter baseObject={cfg.key} lockBase autoSearch />
     </Layout>
   );

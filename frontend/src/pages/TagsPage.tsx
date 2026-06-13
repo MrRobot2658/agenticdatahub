@@ -15,8 +15,10 @@ export default function TagsPage() {
   }, [tenant]);
 
   return (
-    <Layout title="用户标签">
-      <p className="mb-5 text-sm text-gray-500">标签体系与覆盖人数（来自 /tags）</p>
+    <Layout
+      title="计算特征 Computed Traits"
+      subtitle="基于用户行为/属性计算的标签体系与覆盖人数（来自 /tags）"
+    >
       {err && <Card className="p-5 text-sm text-red-600">{err}</Card>}
       {!rows && !err && <div className="flex items-center gap-2 text-gray-500"><Spinner /> 加载中…</div>}
       {rows && (

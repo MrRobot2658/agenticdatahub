@@ -9,6 +9,17 @@ import { useTenant } from "../context/TenantContext";
 
 const COUNTED = ["user", "account", "order", "product", "store"];
 
+// 对象卡 → Segment IA 路由
+const ROUTE: Record<string, string> = {
+  user: "/unify",
+  account: "/unify/objects/account",
+  order: "/unify/objects/order",
+  product: "/unify/objects/product",
+  store: "/unify/objects/store",
+  tag: "/engage/traits",
+  segment: "/engage",
+};
+
 export default function Dashboard() {
   const { tenant } = useTenant();
   const [counts, setCounts] = useState<Record<string, number | null>>({});
@@ -34,13 +45,13 @@ export default function Dashboard() {
   const cards = [...COUNTED, "tag", "segment"];
 
   return (
-    <Layout title="概览">
+    <Layout title="概览 Overview" subtitle="客户数据平台 · Connections → Unify → Engage 全链路概览">
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-7">
         {cards.map((k) => {
           const cfg = byKey(k)!;
           const v = counts[k];
           return (
-            <Link key={k} to={`/objects/${k}`}>
+            <Link key={k} to={ROUTE[k] ?? "/"}>
               <Card className="p-4 transition-shadow hover:shadow-md">
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
                   <cfg.icon className="h-5 w-5" />
@@ -56,28 +67,28 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Link to="/filter">
+        <Link to="/engage/audiences/new">
           <Card className="flex items-center justify-between p-6 transition-shadow hover:shadow-md">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 text-white">
                 <Filter className="h-6 w-6" />
               </div>
               <div>
-                <div className="font-semibold text-gray-900">统一筛选器</div>
+                <div className="font-semibold text-gray-900">创建受众 · Engage</div>
                 <div className="text-sm text-gray-500">多条件 / 跨对象 / 自然语言圈人</div>
               </div>
             </div>
             <ArrowRight className="h-5 w-5 text-gray-300" />
           </Card>
         </Link>
-        <Link to="/etl">
+        <Link to="/connections/sources/new">
           <Card className="flex items-center justify-between p-6 transition-shadow hover:shadow-md">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500 text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-400 text-white">
                 <Workflow className="h-6 w-6" />
               </div>
               <div>
-                <div className="font-semibold text-gray-900">可视化 ETL</div>
+                <div className="font-semibold text-gray-900">接入数据源 · Connections</div>
                 <div className="text-sm text-gray-500">多数据源 → 导入多对象</div>
               </div>
             </div>

@@ -84,11 +84,11 @@ export default function EtlPage() {
   }
 
   return (
-    <Layout title="可视化 ETL">
-      <div className="mb-5 flex items-center gap-2">
-        <p className="text-sm text-gray-500">多数据源 → 字段映射 → 导入多对象 → 进入统一筛选</p>
-        <Badge color="green">CSV/Inline 可运行</Badge>
-      </div>
+    <Layout
+      title="添加数据源 Add Source"
+      subtitle="多数据源 → 字段映射 → 导入多对象 → 进入统一筛选"
+      actions={<Badge color="green">CSV/Inline 可运行</Badge>}
+    >
 
       <div className="grid gap-5 lg:grid-cols-3">
         {/* 1 数据源 */}
