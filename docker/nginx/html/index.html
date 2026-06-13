@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataLake API Gateway</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #3b82f6;
+      --accent2: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, #1e3a5f 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .container { max-width: 720px; width: 100%; }
+    header { text-align: center; margin-bottom: 2.5rem; }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle { color: var(--muted); font-size: 0.95rem; }
+    .cards { display: grid; gap: 1rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .card-info h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.35rem; }
+    .card-info p { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+    .card a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+    .card a:hover { opacity: 0.88; }
+    .btn-blue { background: var(--accent); color: #fff; }
+    .btn-green { background: var(--accent2); color: #fff; }
+    footer {
+      margin-top: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    footer code {
+      background: var(--card);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>DataLake API Gateway</h1>
+      <p class="subtitle">多租户实时 ID-Mapping · 用户画像 · OLAP 查询</p>
+    </header>
+
+    <div class="cards">
+      <article class="card">
+        <div class="card-info">
+          <h2>用户应用</h2>
+          <p>用户列表、群组、多层级标签，支持自然语义搜索</p>
+        </div>
+        <a class="btn-blue" href="/app/" style="background:#8b5cf6">进入应用 →</a>
+      </article>
+
+      <article class="card">
+        <div class="card-info">
+          <h2>ID-Mapping</h2>
+          <p>实时 OneID 合并、渠道映射、用户画像与宽表查询</p>
+        </div>
+        <a class="btn-blue" href="/ID-Mapping/docs">Swagger 文档 →</a>
+      </article>
+
+      <article class="card">
+        <div class="card-info">
+          <h2>SQL Engine</h2>
+          <p>模板 OLAP 查询、自然语言检索、用户分组管理</p>
+        </div>
+        <a class="btn-green" href="/SQL%20Engine/docs">Swagger 文档 →</a>
+      </article>
+    </div>
+
+    <footer>
+      网关入口 <code>/</code> ·
+      ID-Mapping <code>/ID-Mapping/docs</code> ·
+      SQL Engine <code>/SQL Engine/docs</code>
+    </footer>
+  </div>
+</body>
+</html>

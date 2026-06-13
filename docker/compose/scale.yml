@@ -1,0 +1,150 @@
+# 按数据量水平扩展覆盖层
+# SCALE 环境变量由 scripts/scale-up.sh 注入
+
+x-scale-common: &scale-common
+  networks:
+    - datalake-net
+
+services:
+  mysql:
+    environment:
+      SCALE_TIER: ${SCALE:-dev}
+      DORIS_BE_SHARDS: ${DORIS_BE_SHARDS:-1}
+    deploy:
+      resources:
+        limits:
+          memory: ${MYSQL_MEMORY_LIMIT:-1g}
+
+  redis:
+    deploy:
+      resources:
+        limits:
+          memory: ${REDIS_MEMORY:-256mb}
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAXMEMORY:-256mb}
+      --maxmemory-policy allkeys-lru
+      --save ""
+
+  # 额外 Redis 节点模拟 Cluster 分片（medium+ 启用）
+  redis-2:
+    profiles: [scale-medium, scale-large, scale-xlarge]
+    image: redis:7-alpine
+    container_name: datalake-redis-2
+    <<: *scale-common
+    deploy:
+      resources:
+        limits:
+          memory: ${REDIS_MEMORY:-256mb}
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAXMEMORY:-256mb}
+      --maxmemory-policy allkeys-lru
+      --save ""
+    ports:
+      - "6382:6379"
+
+  redis-3:
+    profiles: [scale-large, scale-xlarge]
+    image: redis:7-alpine
+    container_name: datalake-redis-3
+    <<: *scale-common
+    deploy:
+      resources:
+        limits:
+          memory: ${REDIS_MEMORY:-256mb}
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAXMEMORY:-256mb}
+      --maxmemory-policy allkeys-lru
+      --save ""
+    ports:
+      - "6383:6379"
+
+  kafka-2:
+    profiles: [scale-medium, scale-large, scale-xlarge]
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: datalake-kafka-2
+    depends_on:
+      - zookeeper
+    <<: *scale-common
+    ports:
+      - "9095:9092"
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:29092,PLAINTEXT_HOST://localhost:9095
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${KAFKA_REPLICATION:-1}
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  kafka-3:
+    profiles: [scale-large, scale-xlarge]
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: datalake-kafka-3
+    depends_on:
+      - zookeeper
+    <<: *scale-common
+    ports:
+      - "9096:9092"
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:29092,PLAINTEXT_HOST://localhost:9096
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${KAFKA_REPLICATION:-1}
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  kafka-4:
+    profiles: [scale-xlarge]
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: datalake-kafka-4
+    depends_on:
+      - zookeeper
+    <<: *scale-common
+    ports:
+      - "9097:9092"
+    environment:
+      KAFKA_BROKER_ID: 4
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-4:29092,PLAINTEXT_HOST://localhost:9097
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${KAFKA_REPLICATION:-1}
+
+  kafka-5:
+    profiles: [scale-xlarge]
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: datalake-kafka-5
+    depends_on:
+      - zookeeper
+    <<: *scale-common
+    ports:
+      - "9098:9092"
+    environment:
+      KAFKA_BROKER_ID: 5
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-5:29092,PLAINTEXT_HOST://localhost:9098
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${KAFKA_REPLICATION:-1}
+
+  kafka-init:
+    environment:
+      KAFKA_PARTITIONS_PREMIUM: ${KAFKA_PARTITIONS_PREMIUM:-4}
+      KAFKA_PARTITIONS_STANDARD: ${KAFKA_PARTITIONS_STANDARD:-2}
+      KAFKA_PARTITIONS_SHARED: ${KAFKA_PARTITIONS_SHARED:-4}
+      KAFKA_REPLICATION: ${KAFKA_REPLICATION:-1}
+      SCALE_TIER: ${SCALE:-dev}
+
+  id-mapping:
+    deploy:
+      replicas: ${ID_MAPPING_REPLICAS:-1}
+    environment:
+      SCALE_TIER: ${SCALE:-dev}
+
+  sql-engine:
+    environment:
+      OLAP_BACKEND: ${OLAP_BACKEND:-mysql}
+      SCALE_TIER: ${SCALE:-dev}
+      DORIS_BE_SHARDS: ${DORIS_BE_SHARDS:-1}
+    deploy:
+      replicas: ${SQL_ENGINE_REPLICAS:-1}

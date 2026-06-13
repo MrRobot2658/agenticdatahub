@@ -1,0 +1,199 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: datalake-mysql
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: datalake
+      MYSQL_USER: datalake
+      MYSQL_PASSWORD: datalake123
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./docker/mysql/conf.d/scale.cnf:/etc/mysql/conf.d/zz-scale.cnf:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot123"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - datalake-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: datalake-redis
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - datalake-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: datalake-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - datalake-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: datalake-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9094:9092"
+      - "29094:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9094
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:29092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    networks:
+      - datalake-net
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: datalake-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    environment:
+      KAFKA_PARTITIONS_PREMIUM: ${KAFKA_PARTITIONS_PREMIUM:-4}
+      KAFKA_PARTITIONS_STANDARD: ${KAFKA_PARTITIONS_STANDARD:-2}
+      KAFKA_PARTITIONS_SHARED: ${KAFKA_PARTITIONS_SHARED:-4}
+      KAFKA_REPLICATION: ${KAFKA_REPLICATION:-1}
+      SCALE_TIER: ${SCALE:-dev}
+    command:
+      - |
+        PP=$${KAFKA_PARTITIONS_PREMIUM:-4}
+        PS=$${KAFKA_PARTITIONS_STANDARD:-2}
+        PSH=$${KAFKA_PARTITIONS_SHARED:-4}
+        RF=$${KAFKA_REPLICATION:-1}
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists \
+          --topic tenant-1001-events --partitions $$PP --replication-factor $$RF
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists \
+          --topic tenant-1002-events --partitions $$PS --replication-factor $$RF
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists \
+          --topic shared-tenant-events --partitions $$PSH --replication-factor $$RF
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists \
+          --topic enriched-1001-events --partitions $$PP --replication-factor $$RF
+        echo "Kafka topics ready (tier=$${SCALE_TIER:-dev}, partitions=$$PP/$$PS/$$PSH)"
+    networks:
+      - datalake-net
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: datalake-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8083:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    networks:
+      - datalake-net
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: datalake-nginx
+    depends_on:
+      - id-mapping
+      - sql-engine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/html:/usr/share/nginx/html:ro
+      - ./frontend:/usr/share/nginx/app:ro
+    networks:
+      - datalake-net
+    restart: unless-stopped
+
+  id-mapping:
+    build:
+      context: ./services/id-mapping
+      dockerfile: Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "8001:8000"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: datalake
+      MYSQL_PASSWORD: datalake123
+      MYSQL_DATABASE: datalake
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPICS: tenant-1001-events,tenant-1002-events,shared-tenant-events
+      REDIS_TTL_SECONDS: 2592000
+      ROOT_PATH: /ID-Mapping
+    networks:
+      - datalake-net
+    restart: unless-stopped
+
+  sql-engine:
+    build:
+      context: ./services/sql-engine
+      dockerfile: Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8002:8000"
+    env_file:
+      - .env
+    environment:
+      OLAP_BACKEND: mysql
+      OLAP_HOST: mysql
+      OLAP_PORT: 3306
+      OLAP_USER: datalake
+      OLAP_PASSWORD: datalake123
+      OLAP_DATABASE: datalake
+      SCALE_TIER: ${SCALE:-dev}
+      DORIS_BE_SHARDS: ${DORIS_BE_SHARDS:-1}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_API_BASE: ${DEEPSEEK_API_BASE:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      ROOT_PATH: "/SQL Engine"
+    networks:
+      - datalake-net
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  datalake-net:
+    driver: bridge

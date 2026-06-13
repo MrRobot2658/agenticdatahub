@@ -1,0 +1,5 @@
+[mysqld]
+innodb_buffer_pool_size = 4G
+max_connections = 1000
+innodb_log_file_size = 512M
+innodb_flush_log_at_trx_commit = 2

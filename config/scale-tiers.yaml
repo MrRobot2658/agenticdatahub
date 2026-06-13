@@ -1,0 +1,67 @@
+# 数据量规模定义 — Docker 模拟生产服务器拓扑
+# 用法: SCALE=large docker compose -f docker-compose.yml -f docker/compose/scale.yml up -d
+
+tiers:
+  dev:
+    label: "开发 (< 1万)"
+    users: 10000
+    kafka_brokers: 1
+    kafka_partitions_premium: 4
+    kafka_partitions_standard: 2
+    kafka_partitions_shared: 4
+    kafka_replication: 1
+    redis_memory: 256mb
+    redis_instances: 1
+    mysql_buffer_pool: 256M
+    mysql_max_connections: 100
+    id_mapping_replicas: 1
+    sql_engine_replicas: 1
+    doris_be_simulated: 1          # MySQL 模拟 BE 数（逻辑分片提示）
+
+  medium:
+    label: "中型 (1000万)"
+    users: 10000000
+    kafka_brokers: 2
+    kafka_partitions_premium: 8
+    kafka_partitions_standard: 4
+    kafka_partitions_shared: 8
+    kafka_replication: 1
+    redis_memory: 1gb
+    redis_instances: 2
+    mysql_buffer_pool: 1G
+    mysql_max_connections: 500
+    id_mapping_replicas: 2
+    sql_engine_replicas: 1
+    doris_be_simulated: 4
+
+  large:
+    label: "大型 (1亿)"
+    users: 100000000
+    kafka_brokers: 3
+    kafka_partitions_premium: 16
+    kafka_partitions_standard: 8
+    kafka_partitions_shared: 16
+    kafka_replication: 2
+    redis_memory: 2gb
+    redis_instances: 3
+    mysql_buffer_pool: 4G
+    mysql_max_connections: 1000
+    id_mapping_replicas: 4
+    sql_engine_replicas: 2
+    doris_be_simulated: 8
+
+  xlarge:
+    label: "超大型 (2亿)"
+    users: 200000000
+    kafka_brokers: 5
+    kafka_partitions_premium: 32
+    kafka_partitions_standard: 16
+    kafka_partitions_shared: 32
+    kafka_replication: 2
+    redis_memory: 4gb
+    redis_instances: 6
+    mysql_buffer_pool: 8G
+    mysql_max_connections: 2000
+    id_mapping_replicas: 8
+    sql_engine_replicas: 3
+    doris_be_simulated: 12

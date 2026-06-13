@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>CDP优化方案 V3.0-06</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  @page { size: A4; margin: 14mm 12mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #1e293b;
+    background: #fff;
+    padding: 0 20px 32px;
+  }
+
+  /* ── 封面 ── */
+  .cover {
+    height: 260mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    page-break-after: always;
+  }
+  .cover .tag {
+    background: #2563eb; color: #fff;
+    padding: 4px 16px; border-radius: 20px;
+    font-size: 9pt; letter-spacing: 1px; margin-bottom: 20px;
+  }
+  .cover h1 { font-size: 28pt; color: #0f172a; line-height: 1.35; margin-bottom: 14px; }
+  .cover .sub { font-size: 12pt; color: #64748b; margin-bottom: 36px; }
+  .cover .meta { font-size: 10pt; color: #94a3b8; line-height: 2; }
+
+  /* ── 章节 ── */
+  .section { page-break-inside: avoid; margin-bottom: 22px; }
+  h2 {
+    font-size: 14pt; color: #1e40af;
+    border-bottom: 2px solid #dbeafe;
+    padding-bottom: 6px; margin: 28px 0 14px;
+    page-break-after: avoid;
+  }
+  h3 { font-size: 11pt; color: #334155; margin: 14px 0 8px; }
+
+  /* ── 要点列表 ── */
+  .points { list-style: none; margin: 8px 0 14px; }
+  .points li {
+    padding: 5px 0 5px 18px; position: relative; font-size: 10pt;
+  }
+  .points li::before {
+    content: "▸"; position: absolute; left: 0; color: #2563eb; font-weight: 700;
+  }
+
+  /* ── 表格 ── */
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 16px; font-size: 9.5pt; page-break-inside: avoid; }
+  th { background: #1e40af; color: #fff; padding: 7px 10px; text-align: left; font-weight: 600; }
+  td { border: 1px solid #e2e8f0; padding: 6px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .col-before { background: #fef2f2 !important; color: #b91c1c; font-weight: 600; }
+  .col-after  { background: #f0fdf4 !important; color: #15803d; font-weight: 600; }
+  .risk-high  { color: #dc2626; font-weight: 600; }
+  .risk-mid   { color: #d97706; font-weight: 600; }
+
+  /* ── 图表容器 ── */
+  .fig {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 14px 10px 10px;
+    margin: 12px 0 18px;
+    page-break-inside: avoid;
+  }
+  .fig-title {
+    text-align: center; font-size: 9pt; font-weight: 700;
+    color: #475569; margin-bottom: 10px; letter-spacing: 0.5px;
+  }
+  .mermaid { display: flex; justify-content: center; }
+  .mermaid svg { max-width: 100% !important; height: auto !important; }
+
+  /* ── Before/After 双栏 ── */
+  .ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 18px; }
+  .ba-card { border-radius: 6px; overflow: hidden; page-break-inside: avoid; }
+  .ba-card .ba-head { padding: 6px 12px; font-size: 9.5pt; font-weight: 700; }
+  .ba-before .ba-head { background: #fee2e2; color: #b91c1c; }
+  .ba-after  .ba-head { background: #dcfce7; color: #15803d; }
+  .ba-card .ba-body { border: 1px solid #e2e8f0; border-top: none; padding: 10px 8px; background: #fff; }
+
+  /* ── 组件标签 ── */
+  .comp-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0;
+  }
+  .comp-item {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;
+    padding: 8px 10px; text-align: center; font-size: 9pt;
+  }
+  .comp-item strong { display: block; color: #1e40af; font-size: 10pt; margin-bottom: 3px; }
+  .comp-item span { color: #64748b; font-size: 8.5pt; }
+
+  .page-break { page-break-before: always; }
+  .note { font-size: 9pt; color: #64748b; font-style: italic; margin-top: 6px; }
+
+  /* ── 纯 HTML 流程（PDF 稳定） ── */
+  .pipe-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 12px 0 16px;
+    page-break-inside: avoid;
+  }
+  .pipe-box .pipe-label {
+    font-size: 9pt; font-weight: 700; margin-bottom: 10px; padding: 4px 10px;
+    border-radius: 4px; display: inline-block;
+  }
+  .pipe-before .pipe-label { background: #fee2e2; color: #b91c1c; }
+  .pipe-after  .pipe-label { background: #dcfce7; color: #15803d; }
+  .pipe-row {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap;
+    margin: 6px 0;
+  }
+  .pipe-step {
+    flex: 1; background: #fff; border: 1.5px solid #cbd5e1;
+    border-radius: 5px; padding: 10px 8px; text-align: center;
+    font-size: 9.5pt; line-height: 1.4; min-height: 52px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .pipe-step strong { display: block; color: #1e40af; font-size: 10pt; margin-bottom: 3px; }
+  .pipe-step small { color: #64748b; font-size: 8.5pt; }
+  .pipe-arrow {
+    flex: 0 0 28px; display: flex; align-items: center; justify-content: center;
+    color: #3b82f6; font-size: 16pt; font-weight: 700;
+  }
+  .pipe-v { margin: 4px 0; }
+  .pipe-v .pipe-step { margin-bottom: 0; }
+  .pipe-v .pipe-arrow-v {
+    text-align: center; color: #3b82f6; font-size: 14pt;
+    font-weight: 700; padding: 2px 0; line-height: 1;
+  }
+
+  /* ── 对象卡片矩阵 ── */
+  .obj-matrix { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 9.5pt; }
+  .obj-matrix th { background: #334155; font-size: 9pt; padding: 6px 8px; }
+  .obj-matrix td { border: 1px solid #e2e8f0; padding: 7px 10px; text-align: center; }
+  .obj-matrix .obj-name {
+    background: #eff6ff; font-weight: 700; color: #1e40af;
+    font-size: 10pt; padding: 8px;
+  }
+  .obj-matrix .rel-cell { background: #fff; color: #64748b; font-size: 8.5pt; }
+  .obj-matrix .rel-yes { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
+
+  .example-box {
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
+    padding: 10px 14px; margin: 12px 0; font-size: 9.5pt; page-break-inside: avoid;
+  }
+  .example-box strong { color: #92400e; }
+
+  /* ── 自上而下架构层 ── */
+  .arch-stack { margin: 12px 0 18px; page-break-inside: avoid; }
+  .arch-layer {
+    border: 2px solid #3b82f6; border-radius: 6px;
+    background: #fff; overflow: hidden; margin-bottom: 0;
+  }
+  .arch-layer .arch-head {
+    background: #1e40af; color: #fff;
+    padding: 6px 14px; font-size: 9.5pt; font-weight: 700;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .arch-layer .arch-head .lvl {
+    background: rgba(255,255,255,0.2); padding: 1px 8px;
+    border-radius: 10px; font-size: 8.5pt;
+  }
+  .arch-layer .arch-body {
+    padding: 10px 14px; font-size: 9.5pt; line-height: 1.5;
+    text-align: center; color: #334155;
+  }
+  .arch-layer .arch-body strong { color: #1e40af; }
+  .arch-layer.redis-layer { border-color: #f59e0b; }
+  .arch-layer.redis-layer .arch-head { background: #d97706; }
+  .arch-layer.query-layer { border-color: #8b5cf6; margin-top: 14px; }
+  .arch-layer.query-layer .arch-head { background: #7c3aed; }
+  .arch-layer.ctrl-layer { border-color: #64748b; border-style: dashed; margin-top: 14px; }
+  .arch-layer.ctrl-layer .arch-head { background: #475569; }
+  .arch-arrow-down {
+    text-align: center; color: #3b82f6; font-size: 18pt;
+    font-weight: 700; padding: 4px 0; line-height: 1;
+  }
+  .arch-side {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px;
+  }
+  .k8s-badge {
+    display: inline-block; background: #326ce5; color: #fff;
+    font-size: 8pt; padding: 2px 8px; border-radius: 4px; margin-left: 6px;
+  }
+
+  /* ── 实施时间线 ── */
+  .timeline {
+    display: grid; grid-template-columns: 76px repeat(4, 1fr); gap: 8px;
+    margin: 14px 0 6px; page-break-inside: avoid;
+  }
+  .tl-corner { }
+  .tl-month {
+    background: #1e40af; color: #fff; text-align: center;
+    padding: 7px 4px; border-radius: 5px; font-size: 9.5pt; font-weight: 700;
+  }
+  .tl-track {
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 9pt; border-radius: 5px; padding: 6px 4px; text-align: center;
+  }
+  .tl-track.feat { background: #dbeafe; color: #1e40af; }
+  .tl-track.perf { background: #fef3c7; color: #b45309; }
+  .tl-cell {
+    border-radius: 5px; padding: 8px 6px; font-size: 9pt; line-height: 1.4;
+    text-align: center; min-height: 56px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .tl-cell strong { display: block; font-size: 9.5pt; margin-bottom: 2px; }
+  .tl-cell small { color: inherit; opacity: 0.75; font-size: 8pt; }
+  .tl-cell.feat { background: #eff6ff; border: 1.5px solid #bfdbfe; color: #1e3a8a; }
+  .tl-cell.perf { background: #fffbeb; border: 1.5px solid #fde68a; color: #92400e; }
+  .tl-cell.empty { background: #f8fafc; border: 1px dashed #cbd5e1; color: #94a3b8; }
+  .timeline.tl-3 { grid-template-columns: 76px repeat(3, 1fr); }
+  .tl-track.base { background: #ede9fe; color: #6d28d9; }
+  .tl-cell.base { background: #f5f3ff; border: 1.5px solid #ddd6fe; color: #5b21b6; }
+  .comp-item.base { background: #f5f3ff; border-color: #ddd6fe; }
+  .comp-item.base strong { color: #6d28d9; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ 封面 ══════════ -->
+<div class="cover">
+  <div class="tag">CDP优化方案 V3.0-06</div>
+  <h1>OneID 改造<br>与全链路优化</h1>
+  <p class="sub">水平扩展 · 多对象筛选 · 自然语言 Segment · 智能数据底座</p>
+  <div class="meta">
+    <p>2026 年 6 月</p>
+    <p>信息来源：CDP 专项优化 by Bob + CDP Agent by 国荣</p>
+  </div>
+</div>
+
+<!-- ══════════ 1. 总览 ══════════ -->
+<h2>1. 方案总览</h2>
+
+<div class="section">
+  <h3>核心目标</h3>
+  <ul class="points">
+    <li><strong>OneID 实时化</strong>：Java 同步服务 → Flink + Redis，识别延迟 P50 &lt; 5ms</li>
+    <li><strong>多租户水平扩展</strong>：Kafka / Flink / Redis / Doris 按租户分级伸缩</li>
+    <li><strong>多对象筛选</strong>：User 单实体 → 人-货-场-线索跨对象圈选（长期）</li>
+    <li><strong>NL Segment</strong>：自然语言 → 候选规则 → 引擎校验 → 人工确认</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>技术组件</h3>
+  <div class="comp-grid">
+    <div class="comp-item"><strong>Kafka</strong><span>多租户事件总线</span></div>
+    <div class="comp-item"><strong>Flink</strong><span>实时 OneID / 画像 / 宽表</span></div>
+    <div class="comp-item"><strong>Redis</strong><span>OneID 热层缓存</span></div>
+    <div class="comp-item"><strong>Doris</strong><span>OLAP 画像 / 圈选</span></div>
+    <div class="comp-item"><strong>StreamPark</strong><span>Flink 实时 Job 管控</span></div>
+    <div class="comp-item"><strong>DolphinScheduler</strong><span>离线 / 批任务调度</span></div>
+    <div class="comp-item"><strong>SQL Engine</strong><span>模板化 OLAP 查询</span></div>
+    <div class="comp-item"><strong>CDP Agent</strong><span>NL 圈人编排层</span></div>
+  </div>
+  <p class="note">StreamPark 负责实时 Flink Job 启停与扩缩；DolphinScheduler 负责离线导入、批量标签计算、数据同步、Doris 运维及 Job 依赖编排。</p>
+</div>
+
+<h3>目标架构（自上而下）</h3>
+<div class="fig-title" style="margin-bottom:12px;">图 1 · 数据链路层级（接入 → Kafka → Flink → MySQL → Doris）</div>
+
+<div class="arch-stack">
+  <div class="arch-layer">
+    <div class="arch-head"><span>L1 · 接入层</span><span class="lvl">数据入口</span></div>
+    <div class="arch-body"><strong>小程序 / 企微 / 表单 / App / 批量导入 API</strong><br>统一封装为 UserEvent（tenant_id + channel + link_keys + properties）</div>
+  </div>
+  <div class="arch-arrow-down">↓</div>
+  <div class="arch-layer">
+    <div class="arch-head"><span>L2 · Kafka 消息层</span><span class="lvl">事件总线</span></div>
+    <div class="arch-body"><strong>tenant-{id}-events</strong>（大租户独立 Topic）&nbsp;|&nbsp; <strong>shared-tenant-events</strong>（微租户共享）<br>按 tenant_id / channel_id 分区，保证同用户事件有序</div>
+  </div>
+  <div class="arch-arrow-down">↓</div>
+  <div class="arch-layer">
+    <div class="arch-head"><span>L3 · Flink 实时计算层</span><span class="lvl">StreamPark 管控</span></div>
+    <div class="arch-body">
+      <strong>Job-1 ID-Mapping</strong>（OneID 识别 / merge）→ <strong>Job-2 画像聚合</strong> → <strong>Job-3 宽表打宽</strong><br>
+      输出 enriched-events，并行写入下游存储
+    </div>
+  </div>
+  <div class="arch-arrow-down">↓</div>
+  <div class="arch-layer redis-layer">
+    <div class="arch-head"><span>L3+ · Redis 热层（旁路）</span><span class="lvl">&lt; 5ms 点查</span></div>
+    <div class="arch-body">Flink Job-1 同步写入 <strong>channel → one_id</strong> 映射，供实时识别与热点查询</div>
+  </div>
+  <div class="arch-arrow-down">↓</div>
+  <div class="arch-layer">
+    <div class="arch-head"><span>L4 · MySQL 业务冷层</span><span class="lvl">持久化 / 审计</span></div>
+    <div class="arch-body"><strong>one_id 发号器</strong> · <strong>id_mapping 离线导入</strong> · <strong>merge_log 合并审计</strong> · 租户配置</div>
+  </div>
+  <div class="arch-arrow-down">↓</div>
+  <div class="arch-layer">
+    <div class="arch-head"><span>L5 · Doris OLAP 层</span><span class="lvl">画像 / 圈选</span></div>
+    <div class="arch-body"><strong>id_mapping</strong> · <strong>user_profile</strong> · <strong>user_wide</strong><br>大租户独立库 + BE Tag，小租户共享库 tenant_id 分区</div>
+  </div>
+
+  <div class="arch-side">
+    <div class="arch-layer query-layer">
+      <div class="arch-head"><span>查询层</span><span class="lvl">只读</span></div>
+      <div class="arch-body"><strong>SQL Engine</strong> + <strong>CDP Agent</strong><br>业务应用 / MA / BI → 模板查询 → Doris / Redis</div>
+    </div>
+    <div class="arch-layer ctrl-layer">
+      <div class="arch-head"><span>调度管控层</span><span class="lvl">K8s 部署</span></div>
+      <div class="arch-body"><strong>StreamPark</strong>：Flink 实时 Job 启停扩缩<br><strong>DolphinScheduler</strong>：离线导入 / 批标签 / 数据同步</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 2. 短期：水平扩展 ══════════ -->
+<div class="page-break"></div>
+<h2>2. 短期目标：OneID 改造与水平扩展</h2>
+
+<h3>2.1 链路 Before / After</h3>
+<div class="ba-grid">
+  <div class="ba-card ba-before">
+    <div class="ba-head">BEFORE · 现状</div>
+    <div class="ba-body">
+      <pre class="mermaid">
+flowchart TD
+    U["用户/行为"] --> IDM["Java ID-Mapping"]
+    IDM --> MY["MySQL"]
+    MY -->|"CDC"| D1["Doris ODS"]
+    B["行为"] --> FL["Flume"]
+    FL --> ES["Event Service"]
+    ES --> K1["Kafka"]
+    K1 --> D2["Doris + ES"]
+      </pre>
+    </div>
+  </div>
+  <div class="ba-card ba-after">
+    <div class="ba-head">AFTER · 目标</div>
+    <div class="ba-body">
+      <pre class="mermaid">
+flowchart TD
+    IN["用户/行为/导入"] --> K["Kafka"]
+    K --> J1["Flink Job-1 OneID"]
+    J1 --> R["Redis 热层"]
+    J1 --> MY["MySQL 冷层"]
+    J1 --> J2["Job-2 画像"]
+    J1 --> J3["Job-3 宽表"]
+    J2 & J3 --> D["Doris OLAP"]
+    Q["SQL Engine"] --> D & R
+      </pre>
+    </div>
+  </div>
+</div>
+
+<table>
+  <tr><th>维度</th><th class="col-before">Before</th><th class="col-after">After</th></tr>
+  <tr><td>OneID 识别</td><td>Java 同步，10–100ms</td><td>Flink + Redis，&lt; 5ms</td></tr>
+  <tr><td>数据写入</td><td>MySQL → CDC → Doris</td><td>Kafka → Flink 直写 Doris</td></tr>
+  <tr><td>行为链路</td><td>Flume + Event Service + ES</td><td>统一 UserEvent，无 ES</td></tr>
+  <tr><td>横向扩展</td><td>IDM Pod + nginx 路由</td><td>分区 + 并行度 + 消费组</td></tr>
+  <tr><td>任务调度</td><td>分散 Cron / 手工</td><td>DolphinScheduler 统一编排</td></tr>
+</table>
+
+<h3>2.2 规模增长与 K8s 节点规划</h3>
+<p style="font-size:9.5pt;color:#475569;margin-bottom:8px;">
+  所有组件部署于 <strong>K8s 集群</strong>，按数据规模横向扩容。下表为各组件 Pod/节点数参考：
+</p>
+
+<table>
+  <tr>
+    <th>规模</th>
+    <th>K8s 节点<br><small>服务器</small></th>
+    <th>Kafka<br><small>Broker</small></th>
+    <th>Redis<br><small>实例</small></th>
+    <th>Flink<br><small>TM 节点</small></th>
+    <th>Doris<br><small>FE + BE</small></th>
+    <th>DolphinScheduler<br><small>Master + Worker</small></th>
+    <th>Topic 分区</th>
+  </tr>
+  <tr><td>dev（&lt;1万）</td><td>3</td><td>1</td><td>1</td><td>1</td><td>1 + 1</td><td>1 + 1</td><td>4</td></tr>
+  <tr><td>medium（千万）</td><td>6</td><td>2</td><td>2</td><td>2</td><td>1 + 4</td><td>1 + 2</td><td>8</td></tr>
+  <tr><td>large（1亿）</td><td>12</td><td>3</td><td>3</td><td>4</td><td>2 + 8</td><td>1 + 3</td><td>16</td></tr>
+  <tr><td>xlarge（2亿）</td><td>20</td><td>5</td><td>6</td><td>8</td><td>3 + 12</td><td>2 + 5</td><td>32</td></tr>
+</table>
+
+<div class="fig-title" style="margin:14px 0 10px;">图 2 · K8s 集群组件分布（以 large 规模为例，12 节点）</div>
+<div class="pipe-box" style="background:#eff6ff;border-color:#bfdbfe;">
+  <div class="pipe-row" style="flex-wrap:wrap;gap:8px;">
+    <div class="pipe-step" style="flex:1;min-width:100px;"><strong>Kafka ×3</strong><small>消息总线 Pod</small></div>
+    <div class="pipe-step" style="flex:1;min-width:100px;"><strong>Redis ×3</strong><small>热层缓存 Pod</small></div>
+    <div class="pipe-step" style="flex:1;min-width:100px;"><strong>Flink TM ×4</strong><small>流计算 Pod</small></div>
+    <div class="pipe-step" style="flex:1;min-width:100px;"><strong>Doris FE×2 BE×8</strong><small>OLAP Pod</small></div>
+    <div class="pipe-step" style="flex:1;min-width:100px;"><strong>DS ×4</strong><small>调度 Master+Worker</small></div>
+    <div class="pipe-step" style="flex:1;min-width:100px;"><strong>MySQL ×2</strong><small>冷层主从</small></div>
+  </div>
+  <p class="note" style="margin-top:10px;text-align:center;">StreamPark 以 K8s Operator 方式管理 Flink Job；DolphinScheduler 以 Helm 部署于独立 Namespace</p>
+</div>
+
+<h3>2.4 数据量与查询性能目标（SLO）</h3>
+<p style="font-size:9.5pt;color:#475569;margin-bottom:8px;">
+  在上述节点规划下，各规模的数据承载与圈选查询性能目标如下。重点关注<strong>复杂圈选（20 组筛选条件 + 跨对象 JOIN）</strong>的响应时间：
+</p>
+
+<table>
+  <tr>
+    <th>规模</th>
+    <th>OneID 总量</th>
+    <th>日增事件</th>
+    <th>OneID 点查<br><small>Redis P99</small></th>
+    <th>单条件圈选<br><small>Doris</small></th>
+    <th class="col-after">20 组条件圈选<br><small>跨对象 JOIN</small></th>
+    <th>圈选并发<br><small>QPS</small></th>
+  </tr>
+  <tr><td>dev（&lt;1万）</td><td>&lt;1 万</td><td>&lt;10 万</td><td>&lt;1ms</td><td>&lt;0.3s</td><td class="col-after">&lt;1.5s</td><td>5</td></tr>
+  <tr><td>medium（千万）</td><td>千万级</td><td>千万级</td><td>&lt;3ms</td><td>&lt;1s</td><td class="col-after">3–5s</td><td>10</td></tr>
+  <tr><td>large（1亿）</td><td>1 亿</td><td>亿级</td><td>&lt;5ms</td><td>1–2s</td><td class="col-after">6–10s</td><td>20</td></tr>
+  <tr><td>xlarge（2亿）</td><td>2 亿</td><td>数亿</td><td>&lt;5ms</td><td>2–3s</td><td class="col-after">10–15s</td><td>30</td></tr>
+</table>
+<p class="note">20 组条件圈选 = 用户属性 + 行为 + 标签 + 跨对象关联混合条件；通过 tenant_id 分区裁剪、分桶 ≥16、SQL Engine 模板化与超时熔断保障 P99；超 large 规模建议预计算高频 Segment 物化结果以将复杂圈选降至秒级。</p>
+
+<!-- ══════════ 2.3 水平扩展问题 ══════════ -->
+<h3>2.3 水平扩展带来的问题与对策</h3>
+<p style="font-size:9.5pt;color:#475569;margin-bottom:10px;">扩容不是简单加节点，以下四类问题是主要风险点：</p>
+
+<table>
+  <tr>
+    <th style="width:14%">组件</th>
+    <th style="width:30%">典型问题</th>
+    <th style="width:18%">风险</th>
+    <th style="width:38%">对策</th>
+  </tr>
+  <tr>
+    <td><strong>Redis</strong></td>
+    <td>
+      ① 大租户热 Key 打满单分片<br>
+      ② merge 后多副本缓存不一致<br>
+      ③ 扩容后冷数据穿透 Doris<br>
+      ④ LRU 淘汰导致命中率骤降
+    </td>
+    <td class="risk-high">高</td>
+    <td>
+      大租户独立 Redis Cluster；merge 后主动失效 channel key；<br>
+      写时双写 + 短 TTL 兜底；监控命中率 &lt; 90% 告警
+    </td>
+  </tr>
+  <tr>
+    <td><strong>Kafka</strong></td>
+    <td>
+      ① 共享 Topic 仅保证同 tenant 有序<br>
+      ② create/merge 事件跨分区乱序<br>
+      ③ 扩分区后 rebalance 重复消费<br>
+      ④ link_keys 跨分区关联竞态
+    </td>
+    <td class="risk-high">高</td>
+    <td>
+      merge 相关事件 key 统一为 one_id；<br>
+      幂等写入 + merge_log 去重；<br>
+      rebalance 期间开启幂等检查窗口
+    </td>
+  </tr>
+  <tr>
+    <td><strong>Flink</strong></td>
+    <td>
+      ① Doris 写入慢 → 背压 → Kafka 积压<br>
+      ② keyBy 热点 subtask 倾斜<br>
+      ③ RocksDB State 过大 checkpoint 超时<br>
+      ④ 三 Job 链路延迟叠加
+    </td>
+    <td class="risk-high">高</td>
+    <td>
+      Async Sink + 批量写入 Doris；<br>
+      热点 key 加盐再聚合；<br>
+      State TTL + 增量 checkpoint；<br>
+      各 Job 独立监控 lag，超 60s 告警
+    </td>
+  </tr>
+  <tr>
+    <td><strong>Doris</strong></td>
+    <td>
+      ① 小租户共享库全表扫描<br>
+      ② 分桶倾斜导致长尾查询<br>
+      ③ 实时写入与圈选查询抢 IO<br>
+      ④ 宽表 JOIN 内存溢出
+    </td>
+    <td class="risk-mid">中</td>
+    <td>
+      强制 tenant_id 分区裁剪；<br>
+      按数据量重估 BUCKETS（≥16）；<br>
+      读写分离：写入走 Routine Load，查询走 Follower；<br>
+      圈选走 SQL Engine 模板 + 超时熔断
+    </td>
+  </tr>
+  <tr>
+    <td><strong>DolphinScheduler</strong></td>
+    <td>
+      ① 离线批与实时流资源争抢<br>
+      ② 多租户批任务并发打满 Doris<br>
+      ③ 任务依赖失败级联
+    </td>
+    <td class="risk-mid">中</td>
+    <td>
+      离线任务限流 + 租户级配额；<br>
+      批流分时调度（凌晨批 / 白天实时）；<br>
+      关键路径设置重试 + 告警 + 人工兜底
+    </td>
+  </tr>
+</table>
+
+<div class="fig">
+  <div class="fig-title">图 3 · 水平扩展风险传导链</div>
+  <pre class="mermaid">
+flowchart LR
+    K2["Kafka 积压\n消息乱序"] --> F2["Flink 背压\nState 膨胀"]
+    F2 --> R2["Redis 穿透\n缓存失效"]
+    F2 --> D2["Doris 写入慢\nIO 争抢"]
+    D2 --> Q2["圈选查询超时\nP99 劣化"]
+    DS2["DolphinScheduler\n离线批冲击"] --> D2
+    style K2 fill:#fee2e2,stroke:#ef4444
+    style F2 fill:#fee2e2,stroke:#ef4444
+    style D2 fill:#fef9c3,stroke:#eab308
+    style Q2 fill:#fef9c3,stroke:#eab308
+  </pre>
+</div>
+
+<!-- ══════════ 3. 长期：多对象 ══════════ -->
+<div class="page-break"></div>
+<h2>3. 长期目标：多对象筛选</h2>
+
+<table>
+  <tr><th>维度</th><th class="col-before">Before</th><th class="col-after">After</th></tr>
+  <tr><td>核心实体</td><td>仅 User（OneID）</td><td>User + Lead + Account + Product + Store</td></tr>
+  <tr><td>存储</td><td>单表大 JSON（group_ids / tag_ids）</td><td>对象独立表 + object_relations</td></tr>
+  <tr><td>筛选</td><td>用户属性 + 行为</td><td>跨对象 JOIN + 关联行为</td></tr>
+  <tr><td>竞品差异</td><td>与火山 VeCDP 持平</td><td>多对象圈选（火山不支持）</td></tr>
+</table>
+
+<h3>3.1 查询路径对比（图 4）</h3>
+
+<div class="pipe-box pipe-before">
+  <div class="pipe-label">BEFORE · 单实体查询路径</div>
+  <div class="pipe-row">
+    <div class="pipe-step"><strong>① 筛选器</strong><small>仅用户字段</small></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><strong>② User 大宽表</strong><small>ods_omniuser</small></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><strong>③ JSON 解析</strong><small>group_ids / tag_ids</small></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><strong>④ 结果</strong><small>性能差、难扩展</small></div>
+  </div>
+</div>
+
+<div class="pipe-box pipe-after">
+  <div class="pipe-label">AFTER · 多对象查询路径</div>
+  <div class="pipe-row">
+    <div class="pipe-step"><strong>① 筛选器</strong><small>选择对象类型</small></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><strong>② Metadata</strong><small>字段 / 关联定义</small></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><strong>③ 跨对象 DSL</strong><small>含 relation 条件</small></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><strong>④ Query Engine</strong><small>DSL → SQL</small></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><strong>⑤ Segment</strong><small>Doris 执行</small></div>
+  </div>
+</div>
+
+<h3>3.2 对象与存储（图 5）</h3>
+<table>
+  <tr>
+    <th>对象</th><th>主键</th><th>Doris 表</th><th>典型字段</th>
+  </tr>
+  <tr><td><strong>User 用户</strong></td><td>one_id</td><td>user_profile / user_wide</td><td>tags, phone, 渠道 ID</td></tr>
+  <tr><td><strong>Lead 线索</strong></td><td>lead_id</td><td>object_lead</td><td>city, company_size, source</td></tr>
+  <tr><td><strong>Account 账户</strong></td><td>account_id</td><td>object_account</td><td>name, industry, scale</td></tr>
+  <tr><td><strong>Product 商品</strong></td><td>product_id</td><td>object_product</td><td>sku, category, price</td></tr>
+  <tr><td><strong>Store 门店</strong></td><td>store_id</td><td>object_store</td><td>region, address</td></tr>
+  <tr><td colspan="4" style="background:#f1f5f9;font-size:9pt;">
+    关联统一存储：<strong>object_relations</strong>（tenant_id, src_type, src_id, rel_type, dst_type, dst_id）
+  </td></tr>
+</table>
+
+<h3>3.3 对象关联矩阵（图 6）</h3>
+<table class="obj-matrix">
+  <tr>
+    <th></th>
+    <th>User</th><th>Lead</th><th>Account</th><th>Product</th><th>Store</th>
+  </tr>
+  <tr>
+    <td class="obj-name">User</td>
+    <td class="rel-cell">—</td>
+    <td class="rel-yes">← belongs_to</td>
+    <td class="rel-yes">owns →</td>
+    <td class="rel-cell"></td>
+    <td class="rel-yes">visited →</td>
+  </tr>
+  <tr>
+    <td class="obj-name">Lead</td>
+    <td class="rel-yes">belongs_to →</td>
+    <td class="rel-cell">—</td>
+    <td class="rel-cell"></td>
+    <td class="rel-cell"></td>
+    <td class="rel-cell"></td>
+  </tr>
+  <tr>
+    <td class="obj-name">Account</td>
+    <td class="rel-cell"></td>
+    <td class="rel-cell"></td>
+    <td class="rel-cell">—</td>
+    <td class="rel-yes">purchased →</td>
+    <td class="rel-cell"></td>
+  </tr>
+  <tr>
+    <td class="obj-name">Product</td>
+    <td class="rel-cell"></td>
+    <td class="rel-cell"></td>
+    <td class="rel-cell"></td>
+    <td class="rel-cell">—</td>
+    <td class="rel-cell"></td>
+  </tr>
+  <tr>
+    <td class="obj-name">Store</td>
+    <td class="rel-yes">← visited</td>
+    <td class="rel-cell"></td>
+    <td class="rel-cell"></td>
+    <td class="rel-cell"></td>
+    <td class="rel-cell">—</td>
+  </tr>
+</table>
+<p class="note">矩阵中蓝色单元格表示已定义的关联关系，存储于 object_relations 表，Query Engine 通过 JOIN 实现跨对象筛选。</p>
+
+<div class="example-box">
+  <strong>跨对象圈选示例：</strong>
+  「地址在<strong>上海</strong>、公司规模 <strong>&gt; 500</strong> 的<strong>线索</strong>，且关联<strong>用户</strong>带有 <strong>VIP</strong> 标签」
+  <br>→ DSL object=lead + relation.belongs_to(user.tags contains vip) → Doris JOIN 执行
+</div>
+
+<!-- ══════════ 4. NL Segment ══════════ -->
+<h2>4. 自然语言 Segment（CDP Agent）</h2>
+
+<ul class="points">
+  <li>LLM 只负责意图理解，<strong>不直接拼 SQL、不直接发规则</strong></li>
+  <li>候选 DSL 必须经过 Filter / Query Engine 校验 + 人数预估</li>
+  <li>用户确认后才走现有规则保存链路</li>
+</ul>
+
+<div class="fig">
+  <div class="fig-title">图 5 · NL Segment 处理流程</div>
+  <pre class="mermaid">
+flowchart LR
+    NL["自然语言输入"] --> AG["cdp-agent\n意图识别"]
+    AG --> DSL["候选 DSL"]
+    DSL --> FE["Filter Engine\n校验+回显"]
+    DSL --> QE["Query Engine\n人数预估"]
+    FE & QE --> OUT["规则+解释+人数"]
+    OUT --> CF{"用户确认?"}
+    CF -->|是| SAVE["保存 Segment"]
+    CF -->|否| EDIT["人工修改"]
+  </pre>
+</div>
+
+<!-- ══════════ 5. 实施时间线 ══════════ -->
+<div class="page-break"></div>
+<h2>5. 实施时间线（10 月前功能补足）</h2>
+<p style="font-size:9.5pt;color:#475569;margin-bottom:8px;">
+  6–9 月按<strong>功能线</strong>与<strong>性能线</strong>双轨并行推进，10 月前完成 CDP 核心功能补足与底层性能改造：
+</p>
+
+<div class="timeline">
+  <div class="tl-corner"></div>
+  <div class="tl-month">6 月</div>
+  <div class="tl-month">7 月</div>
+  <div class="tl-month">8 月</div>
+  <div class="tl-month">9 月</div>
+
+  <div class="tl-track feat">功能线</div>
+  <div class="tl-cell feat"><strong>超级租户</strong><small>数据权限隔离</small></div>
+  <div class="tl-cell feat"><strong>ABM</strong><small>客户档案</small></div>
+  <div class="tl-cell feat"><strong>自定义对象</strong><small>对象 / 字段自定义</small></div>
+  <div class="tl-cell empty">—</div>
+
+  <div class="tl-track perf">性能线</div>
+  <div class="tl-cell empty">—</div>
+  <div class="tl-cell perf"><strong>现状改造</strong><small>针对现有架构优化</small></div>
+  <div class="tl-cell perf"><strong>重构 OneID</strong><small>Flink + Redis 实时化</small></div>
+  <div class="tl-cell perf"><strong>全链路优化</strong><small>性能调优 + 水平扩展</small></div>
+</div>
+
+<table>
+  <tr><th style="width:14%">轨道</th><th style="width:10%">月份</th><th>交付内容</th></tr>
+  <tr><td rowspan="3"><strong style="color:#1e40af;">功能线</strong></td><td>6 月</td><td><strong>超级租户</strong>：数据权限隔离，租户间数据资源与可见范围彻底隔离，支撑多租户安全合规</td></tr>
+  <tr><td>7 月</td><td><strong>ABM 客户档案</strong>：建立 Account 维度档案体系，支撑面向客户的精细化运营</td></tr>
+  <tr><td>8 月</td><td><strong>自定义对象</strong>：开放对象与字段自定义能力，适配不同行业的数据模型</td></tr>
+  <tr><td rowspan="3"><strong style="color:#b45309;">性能线</strong></td><td>7 月</td><td>针对<strong>现有架构</strong>做改造，解决当前性能瓶颈与稳定性问题</td></tr>
+  <tr><td>8 月</td><td><strong>重构 OneID</strong>：Java 同步服务 → Flink + Redis 实时化，识别延迟降至 &lt; 5ms</td></tr>
+  <tr><td>9 月</td><td><strong>全链路性能优化</strong>：链路调优 + 水平扩展（Kafka / Flink / Redis / Doris 分级伸缩）</td></tr>
+</table>
+<p class="note">功能线优先补齐对外能力（超级租户 → ABM → 自定义对象）；性能线在 7 月起承接现状改造，并以 8 月 OneID 重构为关键里程碑，为 9 月全链路水平扩展奠定基础（详见第 2 章）。</p>
+
+<!-- ══════════ 6. 智能数据底座 ══════════ -->
+<div class="page-break"></div>
+<h2>6. 智能数据底座（10–12 月 · 面向 Agent）</h2>
+<p style="font-size:9.5pt;color:#475569;margin-bottom:8px;">
+  在 CDP（OneID + 多对象 + 圈选）之上构建 <strong>智能数据底座</strong>：将数据接入、加工、语义化能力沉淀为标准服务，统一封装为 <strong>MCP / API</strong>，<strong>为上层 Agent 提供可直接调用的数据底座</strong>。10–12 月分三步交付。
+</p>
+
+<h3>6.1 面向 Agent 的基础服务</h3>
+<div class="comp-grid">
+  <div class="comp-item base"><strong>可视化 ETL</strong><span>拖拽接入 → 多对象建模</span></div>
+  <div class="comp-item base"><strong>多模态处理</strong><span>非结构化 → 结构化 / 向量</span></div>
+  <div class="comp-item base"><strong>NL 语义层</strong><span>Segment / Tag / Group 优化</span></div>
+  <div class="comp-item base"><strong>Agent 数据服务</strong><span>MCP / API 统一供给</span></div>
+</div>
+
+<h3>6.2 实施时间线（10–12 月）</h3>
+<div class="timeline tl-3">
+  <div class="tl-corner"></div>
+  <div class="tl-month">10 月</div>
+  <div class="tl-month">11 月</div>
+  <div class="tl-month">12 月</div>
+
+  <div class="tl-track base">数据底座</div>
+  <div class="tl-cell base"><strong>可视化 ETL → 多对象</strong><small>拖拽式接入加工</small></div>
+  <div class="tl-cell base"><strong>多模态非结构化处理</strong><small>文档/图像/音视频</small></div>
+  <div class="tl-cell base"><strong>NL 语义层优化</strong><small>Segment/Tag/Group</small></div>
+</div>
+
+<table>
+  <tr><th style="width:10%">月份</th><th style="width:28%">基础服务</th><th>交付内容</th></tr>
+  <tr><td><strong>10 月</strong></td><td><strong>可视化 ETL → 多对象</strong></td><td>拖拽式数据接入与转换，直接写入多对象模型（User / Lead / Account / Product / Store），降低数据接入门槛</td></tr>
+  <tr><td><strong>11 月</strong></td><td><strong>多模态非结构化数据处理</strong></td><td>文档 / 图像 / 音视频等非结构化数据解析 → 结构化字段抽取 + 向量化入库，扩充画像与圈选维度</td></tr>
+  <tr><td><strong>12 月</strong></td><td><strong>NL Segment / Tag / Group 优化</strong></td><td>自然语言生成与优化 Segment、Tag、Group，提升语义召回与圈人准确率</td></tr>
+  <tr><td colspan="3" style="background:#f5f3ff;color:#5b21b6;font-size:9pt;">
+    <strong>贯穿全程 · Agent 数据底座服务</strong>：上述能力统一封装为 MCP / API，对外提供标准化数据供给，支撑上层 Agent 直接编排调用。
+  </td></tr>
+</table>
+<p class="note">智能数据底座承接 6–9 月 CDP 功能与性能改造成果，将「数据接入 → 加工 → 语义化 → 服务化」全链路能力对 Agent 开放，是 CDP 向 AI 原生数据平台演进的关键一步。</p>
+
+<!-- ══════════ 7. 高风险项边界与兜底 ══════════ -->
+<div class="page-break"></div>
+<h2>7. 高风险项边界与兜底（架构评审补充）</h2>
+<p style="font-size:9.5pt;color:#475569;margin-bottom:10px;">
+  以下三项直接影响 6–9 月性能线上线稳定性，需在评审会上把<strong>边界（判定/阈值）</strong>与<strong>兜底逻辑</strong>对齐到可验收。
+</p>
+
+<!-- H1 -->
+<h3><span class="risk-high">H1</span> · OneID 实时化的状态一致性</h3>
+<table>
+  <tr>
+    <th style="width:18%">判定逻辑</th>
+    <th style="width:30%">关键阈值 / 配置</th>
+    <th style="width:30%">兜底方案</th>
+    <th style="width:22%">验收标准</th>
+  </tr>
+  <tr>
+    <td><strong>状态后端选型</strong></td>
+    <td>Flink State 用 <strong>RocksDB + 增量 checkpoint</strong>；State TTL=90d，compactFilter 清理</td>
+    <td>从 checkpoint 恢复本地状态，不依赖外部重灌</td>
+    <td>亿级映射不 OOM，checkpoint &lt; 30s</td>
+  </tr>
+  <tr>
+    <td><strong>分层存储职责</strong></td>
+    <td>Flink RocksDB = 计算态；Redis = 热 Key 读缓存（TTL 7d）；Doris/MySQL = 全量真相源</td>
+    <td>查询侧 Cache-Aside + 布隆过滤器，miss 限速回查 Doris</td>
+    <td>Redis 整集群冷启动不击穿 Doris</td>
+  </tr>
+  <tr>
+    <td><strong>冷启动预加载</strong></td>
+    <td><code>open()</code> 阶段预热<strong>近 30 天活跃 OneID</strong>（非全量）</td>
+    <td>Redis 不靠 Flink 回填，查询侧 miss 异步回写</td>
+    <td>重启后 P99 点查无毛刺</td>
+  </tr>
+  <tr>
+    <td><strong>ID 冲突仲裁</strong><br><span class="risk-high">（最易漏）</span></td>
+    <td>优先级：<strong>强标识（登录）&gt; 弱标识（设备）&gt; 时间衰减 &gt; 共享设备降级</strong>；并查集合并记 merge_reason</td>
+    <td>仲裁失败写 <code>conflict_log</code>，保留双向历史，不强行合并</td>
+    <td><code>oneid_conflict_rate</code> &lt; 0.5% 告警</td>
+  </tr>
+  <tr>
+    <td><strong>端到端 Exactly-Once</strong></td>
+    <td>Kafka offset EXACTLY_ONCE；Doris Stream Load Label=<code>jobId_chkId</code> 幂等 + 2PC</td>
+    <td>checkpoint 完成才 commit，失败回滚 precommit</td>
+    <td>重放不重复计数，对账一致</td>
+  </tr>
+</table>
+<div class="example-box">
+  <strong>ID 冲突仲裁规则：</strong>当 device_X 当前绑 user_A、新事件请求绑 user_B —
+  ① 强标识优先（登录态改绑 B，A 转历史）→ ② 弱标识冲突按最近活跃时间衰减 →
+  ③ 同设备出现 &gt; K 个强标识则标记 <strong>shared_device</strong>，降级为「行为归设备不归人」→ ④ 仲裁失败入 conflict_log 离线复核。
+</div>
+
+<!-- H2 -->
+<h3><span class="risk-high">H2</span> · 跨对象圈选的性能边界</h3>
+<table>
+  <tr>
+    <th style="width:18%">判定逻辑</th>
+    <th style="width:30%">关键阈值 / 配置</th>
+    <th style="width:30%">兜底方案</th>
+    <th style="width:22%">验收标准</th>
+  </tr>
+  <tr>
+    <td><strong>关联跳数约束</strong></td>
+    <td>实时 JOIN <strong>最大 ≤ 3 跳</strong>，Query Engine 硬校验</td>
+    <td>超跳直接拒绝 + 引导走预计算宽表</td>
+    <td>4 跳以上 100% 拦截</td>
+  </tr>
+  <tr>
+    <td><strong>反向关联索引</strong></td>
+    <td><code>object_relations</code> 维护<strong>双向边</strong>，反向走物化视图 / 排序键</td>
+    <td>写入自动同步反向边，避免应用层双写不一致</td>
+    <td>反向查询（如查门店全部访客）无全表扫描</td>
+  </tr>
+  <tr>
+    <td><strong>预计算 vs 实时分流</strong></td>
+    <td>高频组合 → 物化宽表（T+0 / 小时级刷新）；低频探索 → 实时 JOIN</td>
+    <td>热度统计：某 JOIN 组合 &gt; 50 次/天 自动建议沉淀宽表</td>
+    <td>高频场景毫秒级，BE 节点不被打满</td>
+  </tr>
+  <tr>
+    <td><strong>行为明细 SLA</strong><br>（承接去 ES）</td>
+    <td>Doris 明细模型 + 倒排索引，或保留 7 天轻量 ES 存明细</td>
+    <td>明确各对象查询 SLA，超时降级返回近似结果</td>
+    <td>近实时明细回溯达成秒级</td>
+  </tr>
+</table>
+
+<!-- H3 -->
+<h3><span class="risk-high">H3</span> · 多租户隔离的资源水位</h3>
+<table>
+  <tr>
+    <th style="width:18%">判定逻辑</th>
+    <th style="width:30%">关键阈值 / 配置</th>
+    <th style="width:30%">兜底方案</th>
+    <th style="width:22%">验收标准</th>
+  </tr>
+  <tr>
+    <td><strong>租户分级标准</strong></td>
+    <td>复合分级取 max 档：<strong>S</strong>(&gt;5000万 OneID / &gt;5亿事件)→A→B→C；付费可升档</td>
+    <td>分级落配置中心，可动态调档</td>
+    <td>每租户有明确档位</td>
+  </tr>
+  <tr>
+    <td><strong>独立集群拆分触发</strong></td>
+    <td>Kafka QPS &gt; 1万持续 7d ／ Redis &gt; 100GB ／ Flink Slot &gt; 30% 且背压</td>
+    <td>连续 14 天 &lt; 触发阈值 50% → 合并回共享池</td>
+    <td>拆分与回收均有据可依，无资源碎片</td>
+  </tr>
+  <tr>
+    <td><strong>配额 + 限流</strong></td>
+    <td>软限 80% 告警 ／ 硬限 100% 令牌桶限流 ／ 突发借用 ≤ 15min</td>
+    <td>DolphinScheduler 内置配额模块，超配额自动限流 + 扩容告警</td>
+    <td>单租户限流不影响其他租户</td>
+  </tr>
+  <tr>
+    <td><strong>全局护栏</strong></td>
+    <td>单租户对 <strong>Flink Slot / Doris BE</strong> 占用绝对上限 <strong>≤ 50%</strong>（硬编码）</td>
+    <td>突发借用不可突破该上限</td>
+    <td>单租户无法打挂全局</td>
+  </tr>
+</table>
+
+<!-- 里程碑兜底 -->
+<h3>配套 · 8 月 OneID 重构 灰度与回滚（H1 上线保障）</h3>
+<table>
+  <tr>
+    <th style="width:18%">判定逻辑</th>
+    <th style="width:30%">关键阈值 / 配置</th>
+    <th style="width:30%">兜底方案</th>
+    <th style="width:22%">验收标准</th>
+  </tr>
+  <tr>
+    <td><strong>灰度切流（按租户）</strong></td>
+    <td>10%（B/C 小租户）→ 观察 3d → 50% → 3d → 100%</td>
+    <td>任一阶段 <code>oneid_match_rate</code> 差异 &gt; 0.5% 暂停放量</td>
+    <td>每阶段有放量门禁</td>
+  </tr>
+  <tr>
+    <td><strong>双写兜底</strong></td>
+    <td>新 Flink 链路与旧 Java 服务并行双写，不同 OneID 命名空间</td>
+    <td>逐租户对账作业自动比对差异</td>
+    <td>双写期数据零丢失</td>
+  </tr>
+  <tr>
+    <td><strong>回滚预案</strong></td>
+    <td>OneID 路由开关在配置中心，秒级切回旧服务</td>
+    <td>旧 Java 服务保留至新链路稳定 ≥ 30 天才下线</td>
+    <td><strong>回滚 ≤ 30min</strong>，演练通过</td>
+  </tr>
+</table>
+<p class="note">评审待决：① 3 跳上限是否覆盖各业务线长尾场景；② ID 冲突仲裁是否覆盖共享/家庭账号歧义；③ 单租户 50% 硬上限是否影响头部客户 SLA 承诺；④ 行为明细「轻量 ES vs Doris 倒排」二选一定档。</p>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'base',
+  themeVariables: {
+    fontSize: '15px',
+    fontFamily: '"PingFang SC","Microsoft YaHei",sans-serif',
+    primaryColor: '#dbeafe',
+    primaryTextColor: '#1e293b',
+    primaryBorderColor: '#3b82f6',
+    lineColor: '#64748b',
+    secondaryColor: '#f0fdf4',
+    tertiaryColor: '#f8fafc',
+    nodeBorder: '#94a3b8',
+    clusterBkg: '#f1f5f9',
+    titleColor: '#1e40af',
+    edgeLabelBackground: '#ffffff',
+  },
+  flowchart: { htmlLabels: true, curve: 'basis', padding: 18, nodeSpacing: 40, rankSpacing: 50 },
+  sequence: { actorMargin: 60, messageMargin: 40 },
+  er: { fontSize: 14 },
+});
+</script>
+</body>
+</html>

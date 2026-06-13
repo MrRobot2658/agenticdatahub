@@ -1,0 +1,152 @@
+# OLAP 查询模板 — 与 Doris 表结构解耦，由 SQL Engine 拼装参数后路由执行
+
+templates:
+  profile_by_one_id:
+    description: "按 OneID 查用户画像（宽表）"
+    params: [tenant_id, one_id]
+    sql: |
+      SELECT one_id, wechat_openid, wechat_unionid, wework_extid, form_id,
+             phone, email, device, channel_count, tags, properties,
+             last_event_time, update_time
+      FROM doris_user_wide
+      WHERE tenant_id = %(tenant_id)s AND one_id = %(one_id)s
+      LIMIT 1
+
+  profile_by_channel:
+    description: "按渠道身份反查画像宽表"
+    params: [tenant_id, channel_type, channel_id]
+    sql: |
+      SELECT w.*
+      FROM doris_user_wide w
+      INNER JOIN doris_id_mapping m
+        ON w.tenant_id = m.tenant_id AND w.one_id = m.one_id
+      WHERE m.tenant_id = %(tenant_id)s
+        AND m.channel_type = %(channel_type)s
+        AND m.channel_id = %(channel_id)s
+      LIMIT 1
+
+  profile_by_phone:
+    description: "按手机号查画像"
+    params: [tenant_id, phone]
+    sql: |
+      SELECT one_id, wechat_openid, wechat_unionid, wework_extid, form_id,
+             phone, tags, properties, update_time
+      FROM doris_user_wide
+      WHERE tenant_id = %(tenant_id)s AND phone = %(phone)s
+      LIMIT 1
+
+  profile_by_form:
+    description: "按表单留资ID查画像"
+    params: [tenant_id, form_id]
+    sql: |
+      SELECT one_id, wechat_openid, form_id, phone, properties, update_time
+      FROM doris_user_wide
+      WHERE tenant_id = %(tenant_id)s AND form_id = %(form_id)s
+      LIMIT 1
+
+  identity_mapping_by_one_id:
+    description: "查用户全部渠道身份映射"
+    params: [tenant_id, one_id]
+    sql: |
+      SELECT channel_type, channel_id, one_id, source, update_time
+      FROM doris_id_mapping
+      WHERE tenant_id = %(tenant_id)s AND one_id = %(one_id)s
+      ORDER BY channel_type
+
+  wide_join_mapping:
+    description: "宽表联合身份映射查询"
+    params: [tenant_id, one_id]
+    sql: |
+      SELECT w.one_id, w.phone, w.form_id, w.wechat_unionid, w.channel_count,
+             w.properties, COUNT(m.channel_id) AS identity_count
+      FROM doris_user_wide w
+      INNER JOIN doris_id_mapping m
+        ON w.tenant_id = m.tenant_id AND w.one_id = m.one_id
+      WHERE w.tenant_id = %(tenant_id)s AND w.one_id = %(one_id)s
+      GROUP BY w.one_id, w.phone, w.form_id, w.wechat_unionid, w.channel_count, w.properties
+
+  high_value_users:
+    description: "高价值用户列表（标签过滤）"
+    params: [tenant_id, limit]
+    sql: |
+      SELECT one_id, phone, form_id, tags, properties, update_time
+      FROM doris_user_wide
+      WHERE tenant_id = %(tenant_id)s
+        AND JSON_CONTAINS(tags, '"high_value"')
+      ORDER BY update_time DESC
+      LIMIT %(limit)s
+
+  profile_list:
+    description: "用户画像分页列表"
+    params: [tenant_id, limit, offset]
+    sql: |
+      SELECT one_id, channel_count, tags,
+             JSON_EXTRACT(properties, '$.last_behavior') AS last_behavior,
+             update_time
+      FROM doris_user_wide
+      WHERE tenant_id = %(tenant_id)s
+      ORDER BY update_time DESC
+      LIMIT %(limit)s OFFSET %(offset)s
+
+  group_list:
+    description: "租户下所有用户分组列表"
+    params: [tenant_id]
+    sql: |
+      SELECT group_id, group_code, group_name, description, group_type,
+             member_count, created_at, updated_at
+      FROM user_groups
+      WHERE tenant_id = %(tenant_id)s
+      ORDER BY group_id
+
+  group_members:
+    description: "分组成员列表（含画像摘要）"
+    params: [tenant_id, group_id]
+    sql: |
+      SELECT m.one_id, m.added_at, m.source,
+             w.phone, w.wechat_openid, w.wechat_unionid, w.form_id, w.tags, w.properties
+      FROM user_group_members m
+      LEFT JOIN doris_user_wide w ON m.tenant_id=w.tenant_id AND m.one_id=w.one_id
+      WHERE m.tenant_id = %(tenant_id)s AND m.group_id = %(group_id)s
+      ORDER BY m.added_at DESC
+
+  group_members_by_code:
+    description: "按分组编码查成员"
+    params: [tenant_id, group_code]
+    sql: |
+      SELECT m.one_id, m.added_at, g.group_name, g.group_code,
+             w.phone, w.wechat_openid, w.tags, w.properties
+      FROM user_group_members m
+      INNER JOIN user_groups g ON m.tenant_id=g.tenant_id AND m.group_id=g.group_id
+      LEFT JOIN doris_user_wide w ON m.tenant_id=w.tenant_id AND m.one_id=w.one_id
+      WHERE m.tenant_id = %(tenant_id)s AND g.group_code = %(group_code)s
+      ORDER BY m.added_at DESC
+
+  user_groups:
+    description: "用户所属分组列表"
+    params: [tenant_id, one_id]
+    sql: |
+      SELECT g.group_id, g.group_code, g.group_name, g.description, m.added_at, m.source
+      FROM user_group_members m
+      INNER JOIN user_groups g ON m.tenant_id=g.tenant_id AND m.group_id=g.group_id
+      WHERE m.tenant_id = %(tenant_id)s AND m.one_id = %(one_id)s
+      ORDER BY g.group_name
+
+  tag_tree:
+    description: "多层级标签树（扁平列表含 parent_id）"
+    params: [tenant_id]
+    sql: |
+      SELECT tag_id, parent_id, tag_code, tag_name, level, tag_path, description, sort_order
+      FROM tag_definitions
+      WHERE tenant_id = %(tenant_id)s
+      ORDER BY sort_order, tag_id
+
+  users_by_tag:
+    description: "按单个标签查用户"
+    params: [tenant_id, tag_code, limit]
+    sql: |
+      SELECT one_id, phone, wechat_openid, tags, properties, update_time
+      FROM doris_user_wide
+      WHERE tenant_id = %(tenant_id)s
+        AND JSON_CONTAINS(tags, JSON_QUOTE(%(tag_code)s))
+      ORDER BY update_time DESC
+      LIMIT %(limit)s

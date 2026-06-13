@@ -1,0 +1,12 @@
+{
+  "name": "datalake-cdp-dev",
+  "version": "1.0.0",
+  "private": true,
+  "description": "多租户实时 ID-Mapping 开发环境 — 文档/PDF 渲染等 Node 工具",
+  "scripts": {
+    "render-pdf": "node scripts/render_cdp_pdf.js"
+  },
+  "dependencies": {
+    "playwright": "1.60.0"
+  }
+}
