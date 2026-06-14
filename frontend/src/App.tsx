@@ -22,6 +22,7 @@ import TagsPage from "./pages/TagsPage";
 import TenantsPage from "./pages/platform/TenantsPage";
 import TenantDetailPage from "./pages/platform/TenantDetailPage";
 import PipelinesPage from "./pages/PipelinesPage";
+import PipelineDetailPage from "./pages/PipelineDetailPage";
 import GroupsPage from "./pages/GroupsPage";
 import ObjectModelPage from "./pages/ObjectModelPage";
 import ObjectRecordDetailPage from "./pages/ObjectRecordDetailPage";
@@ -109,6 +110,7 @@ export default function App() {
           <Route path="/connections/functions" element={<FunctionsPage />} />
           <Route path="/connections/flow" element={<EtlFlowPage />} />
           <Route path="/connections/pipelines" element={<PipelinesPage />} />
+          <Route path="/connections/pipelines/:id" element={<PipelineDetailPage />} />
           <Route path="/connections/sources/new" element={<EtlPage />} />
           <Route path="/connections/sources/:id" element={<SourceDetailPage />} />
 

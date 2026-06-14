@@ -640,7 +640,8 @@ class ConnectionsService:
         with self._conn() as conn, conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT pipeline_id, pipeline_name, nodes, edges, status
+                SELECT pipeline_id, pipeline_name, nodes, edges, status,
+                       last_executed_time, execution_count, created_at
                 FROM connections_pipelines WHERE tenant_id=%s AND pipeline_id=%s
                 """,
                 (tenant_id, pipeline_id),

@@ -114,6 +114,9 @@ export interface PipelineDetail {
   status: string;
   nodes: any[];
   edges: any[];
+  last_executed_time?: string | null;
+  execution_count?: number;
+  created_at?: string | null;
 }
 
 // ── Sources ───────────────────────────────────────────────────────────────

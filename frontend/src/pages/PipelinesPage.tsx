@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Route as RouteIcon, Plus, Play, Workflow, ExternalLink, CheckCircle2, XCircle } from "lucide-react";
+import { Route as RouteIcon, Plus, Workflow, ExternalLink, CheckCircle2, XCircle } from "lucide-react";
 import Layout from "../components/layout/Layout";
-import { Card, Button, Spinner, Modal, TextField } from "../components/ui";
+import { Card, Button, Spinner, Modal, TextField, DataTable } from "../components/ui";
 import { StatCards, StatusPill, EmptyState } from "../components/segment/kit";
 import { useTenant } from "../context/TenantContext";
 import { useLang } from "../context/LangContext";
-import { listPipelines, createPipeline, executePipeline, schedulerHealth, type Pipeline, type SchedulerInfo } from "../api/connections";
+import { listPipelines, createPipeline, schedulerHealth, type Pipeline, type SchedulerInfo } from "../api/connections";
 
 function tone(s: string) {
   if (s === "active" || s === "running") return "green" as const;
@@ -22,8 +22,11 @@ export default function PipelinesPage() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState("");
-  const [msg, setMsg] = useState<Record<string, string>>({});
   const [sched, setSched] = useState<SchedulerInfo | null>(null);
+  const COL = {
+    name: tr("管道", "Pipeline"), status: tr("状态", "Status"),
+    nodes: tr("节点", "Nodes"), edges: tr("连线", "Edges"), last: tr("最近执行", "Last Run"),
+  };
 
   function load() {
     setItems(null); setErr(null);
@@ -39,21 +42,6 @@ export default function PipelinesPage() {
       await createPipeline(tenant, { pipeline_name: name.trim(), nodes: [], edges: [], status: "draft" });
       setName(""); setOpen(false); load();
     } catch (e) { setErr(String(e)); } finally { setBusy(false); }
-  }
-
-  async function exec(p: Pipeline) {
-    setMsg((m) => ({ ...m, [p.pipeline_id]: tr("执行中…", "Running…") }));
-    try {
-      const r = await executePipeline(tenant, p.pipeline_id);
-      const dr = r.scheduler?.dag_run;
-      const txt = dr
-        ? tr(`已触发 Airflow · ${dr.dag_run_id}`, `Triggered on Airflow · ${dr.dag_run_id}`)
-        : (r.scheduler && !r.scheduler.reachable
-            ? tr("调度器不可达（本地模拟）", "Scheduler unreachable (local sim)")
-            : `${r.status}`);
-      setMsg((m) => ({ ...m, [p.pipeline_id]: txt }));
-      load();
-    } catch (e) { setMsg((m) => ({ ...m, [p.pipeline_id]: String(e) })); }
   }
 
   return (
@@ -105,25 +93,24 @@ export default function PipelinesPage() {
       )}
 
       {items && items.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((p) => (
-            <Card key={p.pipeline_id} className="flex h-full flex-col p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-                  <RouteIcon className="h-5 w-5" />
-                </div>
-                <StatusPill tone={tone(p.status)}>{p.status}</StatusPill>
-              </div>
-              <div className="font-semibold text-gray-900">{p.pipeline_name}</div>
-              <div className="mt-1 text-sm text-gray-500">{p.node_count || 0} {tr("节点", "nodes")} · {p.edge_count || 0} {tr("连线", "edges")}</div>
-              <div className="mt-1 text-xs text-gray-400">{tr("最近执行", "Last run")} {p.last_executed_time || "—"}</div>
-              <div className="mt-4 flex items-center gap-2">
-                <Button variant="outline" onClick={() => exec(p)}><Play className="h-4 w-4" /> {tr("执行", "Run")}</Button>
-                {msg[p.pipeline_id] && <span className="text-xs text-gray-500">{msg[p.pipeline_id]}</span>}
-              </div>
-            </Card>
-          ))}
-        </div>
+        <Card className="p-2">
+          <DataTable
+            columns={[COL.name, COL.status, COL.nodes, COL.edges, COL.last]}
+            rows={items.map((p) => ({
+              [COL.name]: (
+                <span className="inline-flex items-center gap-2 font-medium text-gray-900">
+                  <RouteIcon className="h-4 w-4 text-brand-500" /> {p.pipeline_name}
+                </span>
+              ),
+              [COL.status]: <StatusPill tone={tone(p.status)}>{p.status}</StatusPill>,
+              [COL.nodes]: p.node_count || 0,
+              [COL.edges]: p.edge_count || 0,
+              [COL.last]: <span className="text-gray-500">{p.last_executed_time || "—"}</span>,
+              _id: p.pipeline_id,
+            }))}
+            rowLink={(r) => `/connections/pipelines/${r._id}`}
+          />
+        </Card>
       )}
 
       <Modal open={open} title={tr("新建管道", "New Pipeline")} onClose={() => setOpen(false)}>
