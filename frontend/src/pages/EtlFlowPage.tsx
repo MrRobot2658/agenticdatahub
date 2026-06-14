@@ -7,7 +7,6 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
-  FileSpreadsheet, Database, Radio, Cloud,
   Wand2, Filter, Type, Link2,
   Boxes, Megaphone, Webhook, Warehouse,
   Trash2, Save, Sparkles, type LucideIcon,
@@ -16,6 +15,7 @@ import Layout from "../components/layout/Layout";
 import { Button } from "../components/ui";
 import { MockTag } from "../components/segment/kit";
 import { useLang } from "../context/LangContext";
+import { CONNECTORS } from "../lib/connectors";
 
 type Tr = (zh: string, en?: string) => string;
 
@@ -26,12 +26,10 @@ interface NodeMeta { label: string; term: string; icon: LucideIcon; kind: Kind }
 // 调色板（左侧可拖拽节点），按 source → transform → destination 分组
 const buildPalette = (tr: Tr): { group: string; kind: Kind; items: (NodeMeta & { type: string })[] }[] => [
   {
-    group: tr("数据源 Sources", "Sources"), kind: "source", items: [
-      { type: "csv", label: tr("CSV / 粘贴", "CSV / Paste"), term: "CSV", icon: FileSpreadsheet, kind: "source" },
-      { type: "mysql", label: "MySQL", term: "MySQL", icon: Database, kind: "source" },
-      { type: "kafka", label: "Kafka", term: "Kafka", icon: Radio, kind: "source" },
-      { type: "api", label: "REST API", term: "API", icon: Cloud, kind: "source" },
-    ],
+    group: tr("数据源 Sources", "Sources"), kind: "source",
+    items: CONNECTORS.filter((c) => c.surfaces.includes("source")).map((c) => ({
+      type: c.key, label: c.label, term: c.label, icon: c.icon, kind: "source" as Kind,
+    })),
   },
   {
     group: tr("转换 Transforms", "Transforms"), kind: "transform", items: [

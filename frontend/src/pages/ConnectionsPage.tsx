@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  FileSpreadsheet, Cloud, Plus, ArrowRight, Workflow, KeyRound, Copy,
+  FileSpreadsheet, Cloud, Plus, ArrowRight, Workflow,
 } from "lucide-react";
 import Layout from "../components/layout/Layout";
-import { Card, Button, Spinner, Modal, TextField } from "../components/ui";
+import { Card, Button, Spinner } from "../components/ui";
 import { StatCards, StatusPill, EmptyState } from "../components/segment/kit";
 import { useTenant } from "../context/TenantContext";
 import { useLang } from "../context/LangContext";
-import { listSources, createSource, type Source } from "../api/connections";
-import { connectorByKey, groupBySurface, categoryLabel } from "../lib/connectors";
+import { listSources, type Source } from "../api/connections";
+import { connectorByKey } from "../lib/connectors";
 
 function statusTone(s: string) {
   if (s === "active") return "green" as const;
@@ -22,32 +22,12 @@ export default function ConnectionsPage() {
   const { tr } = useLang();
   const [sources, setSources] = useState<Source[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [type, setType] = useState("csv");
-  const [busy, setBusy] = useState(false);
-  const [created, setCreated] = useState<{ source_id: string; write_key: string } | null>(null);
 
   function load() {
     setSources(null); setErr(null);
     listSources(tenant).then(setSources).catch((e) => setErr(String(e)));
   }
   useEffect(load, [tenant]);
-
-  async function submit() {
-    if (!name.trim()) return;
-    setBusy(true); setErr(null);
-    try {
-      const r = await createSource(tenant, { source_name: name.trim(), source_type: type });
-      setCreated({ source_id: r.source_id, write_key: r.write_key });
-      setName("");
-      load();
-    } catch (e) {
-      setErr(String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <Layout
@@ -58,9 +38,9 @@ export default function ConnectionsPage() {
           <Link to="/connections/flow">
             <Button variant="outline"><Workflow className="h-4 w-4" /> {tr("可视化编排", "Visual Flow")}</Button>
           </Link>
-          <Button onClick={() => { setCreated(null); setOpen(true); }}>
-            <Plus className="h-4 w-4" /> {tr("添加数据源", "Add Source")}
-          </Button>
+          <Link to="/connections/catalog">
+            <Button><Plus className="h-4 w-4" /> {tr("添加数据源", "Add Source")}</Button>
+          </Link>
         </>
       }
     >
@@ -83,7 +63,7 @@ export default function ConnectionsPage() {
           desc={tr("添加一个数据源开始接入数据，或用可视化 ETL 直接导入 CSV。", "Add a source to start ingesting data, or import a CSV directly with visual ETL.")}
           action={
             <div className="flex gap-2">
-              <Button onClick={() => { setCreated(null); setOpen(true); }}><Plus className="h-4 w-4" /> {tr("添加数据源", "Add Source")}</Button>
+              <Link to="/connections/catalog"><Button><Plus className="h-4 w-4" /> {tr("添加数据源", "Add Source")}</Button></Link>
               <Link to="/connections/sources/new"><Button variant="outline">{tr("CSV 导入", "Import CSV")}</Button></Link>
             </div>
           }
@@ -118,52 +98,6 @@ export default function ConnectionsPage() {
           })}
         </div>
       )}
-
-      <Modal open={open} title={created ? tr("数据源已创建", "Source created") : tr("添加数据源", "Add Source")} onClose={() => setOpen(false)}>
-        {created ? (
-          <div className="space-y-4">
-            <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
-              <div className="mb-1 flex items-center gap-1 font-medium"><KeyRound className="h-4 w-4" /> {tr("Write Key（仅此一次完整展示）", "Write Key (shown in full only once)")}</div>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 break-all rounded bg-white px-2 py-1 font-mono text-xs">{created.write_key}</code>
-                <button
-                  className="rounded p-1 text-amber-700 hover:bg-amber-100"
-                  onClick={() => navigator.clipboard?.writeText(created.write_key)}
-                  title={tr("复制", "Copy")}
-                ><Copy className="h-4 w-4" /></button>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Link to={`/connections/sources/${created.source_id}`}><Button>{tr("查看详情", "View details")}</Button></Link>
-              <Button variant="outline" onClick={() => setOpen(false)}>{tr("关闭", "Close")}</Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <TextField label={tr("名称", "Name")} value={name} onChange={setName} placeholder={tr("如：官网埋点 / 业务库订单", "e.g. Website tracking / Order database")} />
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">{tr("类型", "Type")}</span>
-              <select
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-              >
-                {groupBySurface("source").map((g) => (
-                  <optgroup key={g.category} label={categoryLabel(g.category, tr)}>
-                    {g.items.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>{tr("取消", "Cancel")}</Button>
-              <Button onClick={submit} disabled={busy || !name.trim()}>
-                {busy ? <Spinner /> : <Plus className="h-4 w-4" />} {tr("创建", "Create")}
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </Layout>
   );
 }

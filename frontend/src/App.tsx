@@ -10,6 +10,7 @@ import EtlPage from "./pages/EtlPage";
 import EtlFlowPage from "./pages/EtlFlowPage";
 import ObjectListPage from "./pages/ObjectListPage";
 import ConnectionsPage from "./pages/ConnectionsPage";
+import SourceCatalogPage from "./pages/SourceCatalogPage";
 import DestinationsPage from "./pages/DestinationsPage";
 import UnifyPage from "./pages/UnifyPage";
 import ObjectsHubPage from "./pages/ObjectsHubPage";
@@ -101,6 +102,7 @@ export default function App() {
 
           {/* Connections */}
           <Route path="/connections" element={<ConnectionsPage />} />
+          <Route path="/connections/catalog" element={<SourceCatalogPage />} />
           <Route path="/connections/destinations" element={<DestinationsPage />} />
           <Route path="/connections/reverse-etl" element={<ReverseEtlPage />} />
           <Route path="/connections/warehouses" element={<WarehousesPage />} />
