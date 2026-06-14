@@ -45,6 +45,18 @@ from schemas import (
     UserSummary,
 )
 
+# ── 功能模块 Router（00~09）─────────────────────────────────────────────────
+from platform_api import router as platform_router
+from connections_api import router as connections_router
+from unify_api import router as unify_router
+from objects_api import router as objects_admin_router
+from accounts_api import router as accounts_router
+from engage_api import router as engage_router
+from protocols_api import router as protocols_router
+from privacy_api import router as privacy_router
+from monitor_api import router as monitor_router
+from settings_api import router as settings_router
+
 TAGS = [
     {"name": "系统", "description": "健康检查"},
     {"name": "模板查询", "description": "预置 SQL 模板 + 参数拼装"},
@@ -480,6 +492,19 @@ def agent_confirm(body: AgentConfirmRequest):
         if "Duplicate" in str(e):
             raise HTTPException(status_code=409, detail="Segment 编码已存在")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── 挂载功能模块 Router（在内联端点之后注册，内联端点保持优先）────────────────
+app.include_router(platform_router)
+app.include_router(connections_router)
+app.include_router(unify_router)
+app.include_router(objects_admin_router)
+app.include_router(accounts_router)
+app.include_router(engage_router)
+app.include_router(protocols_router)
+app.include_router(privacy_router)
+app.include_router(monitor_router)
+app.include_router(settings_router)
 
 
 def custom_openapi():
