@@ -1,6 +1,8 @@
-# AgenticDataHub · 多租户 CDP（对标 Twilio Segment）
+# AgenticDataHub · 多租户实时客户数据中枢（Agentic CDP）
 
-一套本地可跑的客户数据平台（CDP）开发环境：后端是**多租户实时 ID-Mapping + 画像宽表 + 圈人引擎**，前端是**对标 [Twilio Segment](https://www.twilio.com/docs/segment) 的控制台**（连接 → 统一 → 触达 → 协议 → 隐私 → 监控）。
+**AgenticDataHub** 是一套本地可跑的**智能客户数据中枢**：后端是**多租户实时 ID-Mapping + OneID 画像宽表 + 圈人引擎**，并内置 **AI Agent**（自然语言圈人 + 只读 MCP 工具）；前端是**对标 [Twilio Segment](https://www.twilio.com/docs/segment) 的控制台**（连接 → 统一 → 触达 → 协议 → 隐私 → 监控）。
+
+> **名字含义**：**Agentic** —— DeepSeek 驱动的自然语言圈人/查询与 MCP 工具，让 LLM 安全地操作数据（候选 DSL 必须过校验层，绝不直出 SQL）；**DataHub** —— 把小程序/企微/表单/App/批量导入等多渠道身份，实时归一为 OneID 并打宽成统一画像的中枢。
 
 **仓库**：https://github.com/MrRobot2658/agenticdatahub
 
@@ -45,9 +47,9 @@
 
 | 组件 | 端口 | 说明 |
 |------|------|------|
-| Nginx 网关 | 8080 | 首页 + CDP 控制台 + API 路由代理 |
-| CDP 控制台（前端） | 8080/console/ | 对标 Segment 的 React SPA（生产）；dev 用 5173 |
-| SQL Engine | 8002 | OLAP 查询层（模板 SQL + DSL 圈人 + NL + 只读 MCP，与 Doris 解耦） |
+| Nginx 网关 | 8080 | 首页 + AgenticDataHub 控制台 + API 路由代理 |
+| AgenticDataHub 控制台（前端） | 8080/console/ | 对标 Segment 的 React SPA（生产）；dev 用 5173 |
+| SQL Engine | 8002 | OLAP 查询层 + Agent（模板 SQL + DSL 圈人 + NL 圈人 + 只读 MCP，与 Doris 解耦） |
 | ID-Mapping | 8001 | 实时合并服务 API（OneID 识别 / merge） |
 | MySQL 8 | 3308 | 业务库：id_mapping / user_profile / user_groups / merge_log / object_* |
 | Redis 7 | 6381 | OneID 热缓存 |
@@ -150,8 +152,8 @@ npm run dev                             # → http://localhost:5173/
 
 | 用途 | 地址 |
 |------|------|
-| CDP 控制台（开发态） | http://localhost:5173/ |
-| CDP 控制台（生产/网关） | http://localhost:8080/console/ |
+| AgenticDataHub 控制台（开发态） | http://localhost:5173/ |
+| AgenticDataHub 控制台（生产/网关） | http://localhost:8080/console/ |
 | SQL Engine Swagger | http://localhost:8002/docs |
 | ID-Mapping Swagger | http://localhost:8001/docs |
 | MySQL | `localhost:3308` · db `agenticdatahub` · user `agenticdatahub` / `agenticdatahub123` |
