@@ -174,5 +174,237 @@ def cdp_list_segments(tenant_id: int = DEFAULT_TENANT) -> list:
     return _get(f"/segments/{tenant_id}")
 
 
+# ══════════════════════════════════════════════════════════════════════════
+# 全模块只读能力（00~09）—— 均为读，不写不改；写操作仍走各自人工确认链路。
+# ══════════════════════════════════════════════════════════════════════════
+
+# ── 00 平台 Platform ──────────────────────────────────────────────────────
+@mcp.tool()
+def cdp_tenants(search: str | None = None, tier: str | None = None,
+                status: str | None = None, limit: int = 50) -> dict:
+    """列出租户（名称/tier/状态/scale 档位/近 24h 事件量），支持 search/tier/status 过滤。"""
+    return _get("/platform/tenants",
+                {"search": search, "tier": tier, "status": status, "limit": limit})
+
+
+@mcp.tool()
+def cdp_tenant_config(tenant_id: int = DEFAULT_TENANT, domain: str | None = None) -> dict:
+    """查某租户的每域有效配置（基础/数据通道/容量/ID-Mapping/存储/隐私/集成/配额）。"""
+    return _get(f"/platform/tenants/{tenant_id}/config", {"domain": domain})
+
+
+# ── 01 连接 Connections ───────────────────────────────────────────────────
+@mcp.tool()
+def cdp_sources(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出数据源 Sources（含 write_key / 类型 / 状态）。"""
+    return _get("/connections/sources", {"tenant_id": tenant_id})
+
+
+@mcp.tool()
+def cdp_destinations(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出目的地 Destinations（投递目标 + 映射 + 状态）。"""
+    return _get("/connections/destinations", {"tenant_id": tenant_id})
+
+
+@mcp.tool()
+def cdp_pipelines(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出可视化编排管道 Pipelines（source→transform→destination 拓扑）。"""
+    return _get("/connections/pipelines", {"tenant_id": tenant_id})
+
+
+@mcp.tool()
+def cdp_reverse_etl_jobs(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出反向 ETL 任务（数仓宽表→目的地，含调度）。"""
+    return _get("/connections/reverse-etl/jobs", {"tenant_id": tenant_id})
+
+
+@mcp.tool()
+def cdp_warehouses(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出数据仓库连接 Warehouses。"""
+    return _get("/connections/warehouses", {"tenant_id": tenant_id})
+
+
+@mcp.tool()
+def cdp_functions(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出自定义函数 Functions。"""
+    return _get("/connections/functions", {"tenant_id": tenant_id})
+
+
+# ── 02 统一 Unify ─────────────────────────────────────────────────────────
+@mcp.tool()
+def cdp_groups(tenant_id: int = DEFAULT_TENANT, filter_type: str | None = None) -> Any:
+    """列出群组/人群包（filter_type=static|dynamic 过滤；动态群组带 filter_rule）。"""
+    return _get(f"/unify/groups/{tenant_id}", {"filter_type": filter_type})
+
+
+@mcp.tool()
+def cdp_identity_rules(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出身份解析规则（merge 策略/标识符优先级/上限）。"""
+    return _get(f"/unify/identity-rules/{tenant_id}")
+
+
+@mcp.tool()
+def cdp_sql_traits(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出 SQL 计算特征定义。"""
+    return _get(f"/unify/sql-traits/{tenant_id}")
+
+
+@mcp.tool()
+def cdp_predictions(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出预测模型定义。"""
+    return _get(f"/unify/predictions/{tenant_id}")
+
+
+@mcp.tool()
+def cdp_object_tags(object_type: str, object_id: str, tenant_id: int = DEFAULT_TENANT) -> Any:
+    """查某对象实例（任意对象）上挂的标签。"""
+    return _get(f"/unify/object-tags/{tenant_id}/{object_type}/{object_id}")
+
+
+# ── 03 对象 Objects ───────────────────────────────────────────────────────
+@mcp.tool()
+def cdp_object_model(tenant_id: int = DEFAULT_TENANT) -> dict:
+    """对象模型全景：内置+自建对象定义（字段/主键/表）与关系矩阵（含边属性）。"""
+    return _get(f"/objects/{tenant_id}/definitions")
+
+
+@mcp.tool()
+def cdp_object_record(object_key: str, pk_value: str, tenant_id: int = DEFAULT_TENANT) -> Any:
+    """查单条对象记录的字段明细。"""
+    return _get(f"/objects/{tenant_id}/{object_key}/{pk_value}")
+
+
+@mcp.tool()
+def cdp_object_record_relations(object_key: str, pk_value: str,
+                                tenant_id: int = DEFAULT_TENANT) -> Any:
+    """查单条对象记录的一跳关联对象（正向/反向，按 rel_type 分组）。"""
+    return _get(f"/objects/{tenant_id}/{object_key}/{pk_value}/relations")
+
+
+# ── 04 客户 Accounts ──────────────────────────────────────────────────────
+@mcp.tool()
+def cdp_accounts(tenant_id: int = DEFAULT_TENANT, limit: int = 50) -> Any:
+    """列出客户（account）主数据。"""
+    return _get("/accounts", {"tenant_id": tenant_id, "limit": limit})
+
+
+@mcp.tool()
+def cdp_account_detail(account_id: str, tenant_id: int = DEFAULT_TENANT) -> Any:
+    """查客户详情 + 关联用户 + 聚合指标。"""
+    return {
+        "detail": _get(f"/accounts/{account_id}", {"tenant_id": tenant_id}),
+        "users": _get(f"/accounts/{account_id}/users", {"tenant_id": tenant_id}),
+        "aggregates": _get(f"/accounts/{account_id}/aggregates", {"tenant_id": tenant_id}),
+    }
+
+
+# ── 05 触达 Engage ────────────────────────────────────────────────────────
+@mcp.tool()
+def cdp_journeys(tenant_id: int = DEFAULT_TENANT, status: str | None = None) -> Any:
+    """列出旅程 Journeys（多步自动化）。"""
+    return _get("/engage/journeys", {"tenant_id": tenant_id, "status": status})
+
+
+@mcp.tool()
+def cdp_broadcasts(tenant_id: int = DEFAULT_TENANT, status: str | None = None) -> Any:
+    """列出群发 Broadcasts（一次性触达）。"""
+    return _get("/engage/broadcasts", {"tenant_id": tenant_id, "status": status})
+
+
+# ── 06 协议 Protocols ─────────────────────────────────────────────────────
+@mcp.tool()
+def cdp_tracking_plans(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出埋点计划 Tracking Plans。"""
+    return _get("/protocols/tracking-plans", {"tenant_id": tenant_id})
+
+
+@mcp.tool()
+def cdp_violations(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出埋点违规 Violations。"""
+    return _get("/protocols/violations", {"tenant_id": tenant_id})
+
+
+@mcp.tool()
+def cdp_transformations(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出数据转换 Transformations。"""
+    return _get("/protocols/transformations", {"tenant_id": tenant_id})
+
+
+# ── 07 隐私 Privacy ───────────────────────────────────────────────────────
+@mcp.tool()
+def cdp_pii_rules(tenant_id: int = DEFAULT_TENANT, object_type: str | None = None) -> Any:
+    """列出 PII 管控规则（字段→脱敏/哈希/加密/拦截）。"""
+    return _get("/privacy/pii/rules", {"tenant_id": tenant_id, "object_type": object_type})
+
+
+@mcp.tool()
+def cdp_consent_categories(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出同意分类 Consent Categories。"""
+    return _get("/privacy/consent/categories", {"tenant_id": tenant_id})
+
+
+@mcp.tool()
+def cdp_deletion_requests(tenant_id: int = DEFAULT_TENANT, status: str | None = None) -> Any:
+    """列出删除/抑制工单 Deletion / Suppression。"""
+    return _get("/privacy/deletion", {"tenant_id": tenant_id, "status": status})
+
+
+@mcp.tool()
+def cdp_suppression_check(identifier: str, tenant_id: int = DEFAULT_TENANT) -> Any:
+    """校验某标识符是否在抑制名单中。"""
+    return _get("/privacy/suppression/check", {"tenant_id": tenant_id, "identifier": identifier})
+
+
+# ── 08 监控 Monitor ───────────────────────────────────────────────────────
+@mcp.tool()
+def cdp_monitor_overview(tenant_id: int = DEFAULT_TENANT, source: str | None = None,
+                         window_minutes: int = 60) -> dict:
+    """投递总览：近 window 分钟事件总数/成功率/失败数/平均延迟。"""
+    return _get("/monitor/overview",
+                {"tenant_id": tenant_id, "source": source, "window_minutes": window_minutes})
+
+
+@mcp.tool()
+def cdp_monitor_metrics(tenant_id: int = DEFAULT_TENANT, source: str | None = None) -> Any:
+    """投递指标时间序列（按桶，供趋势图）。"""
+    return _get("/monitor/metrics", {"tenant_id": tenant_id, "source": source})
+
+
+@mcp.tool()
+def cdp_delivery_logs(tenant_id: int = DEFAULT_TENANT, status: str | None = None,
+                      limit: int = 50) -> Any:
+    """逐事件投递日志（success/failed/retry/skipped）。"""
+    return _get("/monitor/delivery-logs",
+                {"tenant_id": tenant_id, "status": status, "limit": limit})
+
+
+@mcp.tool()
+def cdp_alerts(tenant_id: int = DEFAULT_TENANT) -> dict:
+    """告警规则 + 最近告警事件。"""
+    return {
+        "rules": _get("/monitor/alert-rules", {"tenant_id": tenant_id}),
+        "events": _get("/monitor/alert-events", {"tenant_id": tenant_id}),
+    }
+
+
+# ── 09 设置 Settings ──────────────────────────────────────────────────────
+@mcp.tool()
+def cdp_iam_users(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出 IAM 成员（用户 + 角色）。"""
+    return _get("/iam/users", {"tenant_id": tenant_id})
+
+
+@mcp.tool()
+def cdp_iam_roles(tenant_id: int = DEFAULT_TENANT) -> Any:
+    """列出 IAM 角色与权限。"""
+    return _get("/iam/roles", {"tenant_id": tenant_id})
+
+
+@mcp.tool()
+def cdp_audit_logs(tenant_id: int = DEFAULT_TENANT, limit: int = 50) -> Any:
+    """列出审计日志 Audit Trail。"""
+    return _get("/iam/audit", {"tenant_id": tenant_id, "limit": limit})
+
+
 if __name__ == "__main__":
     mcp.run()  # stdio
