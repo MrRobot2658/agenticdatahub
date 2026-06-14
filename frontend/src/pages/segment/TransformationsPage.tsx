@@ -4,15 +4,20 @@ import Layout from "../../components/layout/Layout";
 import { Button, Card, Modal, Spinner, TextField } from "../../components/ui";
 import { StatCards, StatusPill, EmptyState } from "../../components/segment/kit";
 import { useTenant } from "../../context/TenantContext";
+import { useLang } from "../../context/LangContext";
 import {
   listTransformations, createTransformation, deleteTransformation,
   updateTransformation, type Transformation,
 } from "../../api/protocols";
 
-const TYPE_LABEL: Record<string, string> = { rename: "重命名", delete: "删除", mapping: "映射" };
-
 export default function TransformationsPage() {
   const { tenant } = useTenant();
+  const { tr } = useLang();
+  const TYPE_LABEL: Record<string, string> = {
+    rename: tr("重命名", "Rename"),
+    delete: tr("删除", "Delete"),
+    mapping: tr("映射", "Mapping"),
+  };
   const [rows, setRows] = useState<Transformation[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 

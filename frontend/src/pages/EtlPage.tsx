@@ -7,12 +7,13 @@ import { OBJECTS, byKey } from "../lib/objects";
 import { getMetadata, etlPreview, etlImport, type EtlFieldMap } from "../api/client";
 import type { Metadata } from "../api/types";
 import { useTenant } from "../context/TenantContext";
+import { useLang } from "../context/LangContext";
 
 const SOURCES = [
-  { key: "csv", icon: FileSpreadsheet, name: "CSV / 粘贴", desc: "含表头的文本", ready: true },
-  { key: "mysql", icon: Database, name: "MySQL", desc: "业务库 / 离线表", ready: false },
-  { key: "kafka", icon: Radio, name: "Kafka", desc: "实时事件流", ready: false },
-  { key: "api", icon: Cloud, name: "REST API", desc: "三方数据源", ready: false },
+  { key: "csv", icon: FileSpreadsheet, name: "CSV / 粘贴", nameEn: "CSV / Paste", desc: "含表头的文本", descEn: "Text with header row", ready: true },
+  { key: "mysql", icon: Database, name: "MySQL", nameEn: "MySQL", desc: "业务库 / 离线表", descEn: "Business DB / offline tables", ready: false },
+  { key: "kafka", icon: Radio, name: "Kafka", nameEn: "Kafka", desc: "实时事件流", descEn: "Real-time event stream", ready: false },
+  { key: "api", icon: Cloud, name: "REST API", nameEn: "REST API", desc: "三方数据源", descEn: "Third-party sources", ready: false },
 ];
 
 const targets = OBJECTS.filter((o) => o.kind === "object");
@@ -28,6 +29,7 @@ function parseHeader(csv: string, delim = ","): string[] {
 
 export default function EtlPage() {
   const { tenant } = useTenant();
+  const { tr } = useLang();
   const [meta, setMeta] = useState<Metadata | null>(null);
   const [sourceType, setSourceType] = useState("csv");
   const [csv, setCsv] = useState(SAMPLE_CSV);
@@ -85,15 +87,15 @@ export default function EtlPage() {
 
   return (
     <Layout
-      title="添加数据源 Add Source"
-      subtitle="多数据源 → 字段映射 → 导入多对象 → 进入统一筛选"
-      actions={<Badge color="green">CSV/Inline 可运行</Badge>}
+      title={tr("添加数据源 Add Source", "Add Source")}
+      subtitle={tr("多数据源 → 字段映射 → 导入多对象 → 进入统一筛选", "Multiple sources → field mapping → import to objects → unified filter")}
+      actions={<Badge color="green">{tr("CSV/Inline 可运行", "CSV/Inline ready")}</Badge>}
     >
 
       <div className="grid gap-5 lg:grid-cols-3">
         {/* 1 数据源 */}
         <Card className="p-5">
-          <StepTitle n={1} title="数据源" />
+          <StepTitle n={1} title={tr("数据源", "Sources")} />
           <div className="mb-3 grid grid-cols-2 gap-2">
             {SOURCES.map((s) => (
               <button
@@ -105,8 +107,8 @@ export default function EtlPage() {
                 } ${s.ready ? "hover:border-brand-300" : "cursor-not-allowed opacity-50"}`}
               >
                 <s.icon className="mb-1 h-4 w-4 text-gray-600" />
-                <div className="font-medium text-gray-800">{s.name}</div>
-                <div className="text-xs text-gray-400">{s.ready ? s.desc : "路线图"}</div>
+                <div className="font-medium text-gray-800">{tr(s.name, s.nameEn)}</div>
+                <div className="text-xs text-gray-400">{s.ready ? tr(s.desc, s.descEn) : tr("路线图", "Roadmap")}</div>
               </button>
             ))}
           </div>
@@ -114,7 +116,7 @@ export default function EtlPage() {
             className="h-44 w-full rounded-lg border border-gray-300 p-3 font-mono text-xs focus:border-brand-400 focus:outline-none"
             value={csv}
             onChange={(e) => { setCsv(e.target.value); }}
-            placeholder="粘贴 CSV（首行表头）"
+            placeholder={tr("粘贴 CSV（首行表头）", "Paste CSV (first row is header)")}
           />
           {sourceCols.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
@@ -125,7 +127,7 @@ export default function EtlPage() {
 
         {/* 2 目标对象 */}
         <Card className="p-5">
-          <StepTitle n={2} title="导入目标（多对象）" />
+          <StepTitle n={2} title={tr("导入目标（多对象）", "Import Target (Objects)")} />
           <div className="grid grid-cols-2 gap-2">
             {targets.map((o) => (
               <button
@@ -141,13 +143,13 @@ export default function EtlPage() {
             ))}
           </div>
           <div className="mt-3 text-xs text-gray-400">
-            目标字段：{targetFields.join(" / ") || "…"}
+            {tr("目标字段：", "Target fields: ")}{targetFields.join(" / ") || "…"}
           </div>
         </Card>
 
         {/* 3 字段映射 */}
         <Card className="p-5">
-          <StepTitle n={3} title="字段映射" />
+          <StepTitle n={3} title={tr("字段映射", "Field Mapping")} />
           <div className="space-y-2">
             {mapping.map((m, i) => (
               <div key={i} className="flex items-center gap-1.5">
@@ -156,7 +158,7 @@ export default function EtlPage() {
                   value={m.source || ""}
                   onChange={(e) => setMapping(mapping.map((x, j) => j === i ? { ...x, source: e.target.value } : x))}
                 >
-                  <option value="">（源列）</option>
+                  <option value="">{tr("（源列）", "(Source column)")}</option>
                   {sourceCols.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-300" />
@@ -178,22 +180,22 @@ export default function EtlPage() {
                 onClick={() => setMapping([...mapping, { target: targetFields[0] || "", source: sourceCols[0] || "" }])}
                 className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
               >
-                <Plus className="h-3.5 w-3.5" /> 添加映射
+                <Plus className="h-3.5 w-3.5" /> {tr("添加映射", "Add mapping")}
               </button>
               <button
                 onClick={() => setMapping(autoMap())}
                 className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700"
               >
-                <Wand2 className="h-3.5 w-3.5" /> 自动匹配
+                <Wand2 className="h-3.5 w-3.5" /> {tr("自动匹配", "Auto match")}
               </button>
             </div>
           </div>
           <div className="mt-4 flex gap-2">
             <Button variant="outline" onClick={() => run("preview")} disabled={!!busy}>
-              {busy === "preview" ? <Spinner /> : <Eye className="h-4 w-4" />} 预览
+              {busy === "preview" ? <Spinner /> : <Eye className="h-4 w-4" />} {tr("预览", "Preview")}
             </Button>
             <Button onClick={() => run("import")} disabled={!!busy}>
-              {busy === "import" ? <Spinner /> : <Play className="h-4 w-4" />} 导入
+              {busy === "import" ? <Spinner /> : <Play className="h-4 w-4" />} {tr("导入", "Import")}
             </Button>
           </div>
         </Card>
@@ -205,7 +207,7 @@ export default function EtlPage() {
       {preview && (
         <Card className="mt-5 p-5">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-            <Wand2 className="h-4 w-4 text-brand-500" /> 预览（共 {preview.total_rows} 行，映射到 {byKey(preview.target_object)?.label}）
+            <Wand2 className="h-4 w-4 text-brand-500" /> {tr("预览（共 ", "Preview (")}{preview.total_rows}{tr(" 行，映射到 ", " rows, mapped to ")}{byKey(preview.target_object)?.label}{tr("）", ")")}
           </div>
           {preview.issues.length > 0 && (
             <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
@@ -213,7 +215,7 @@ export default function EtlPage() {
             </div>
           )}
           <DataTable
-            columns={preview.preview[0] ? Object.keys(preview.preview[0]) : ["（空映射）"]}
+            columns={preview.preview[0] ? Object.keys(preview.preview[0]) : [tr("（空映射）", "(Empty mapping)")]}
             rows={preview.preview}
           />
         </Card>
@@ -223,18 +225,18 @@ export default function EtlPage() {
       {result && (
         <Card className="mt-5 flex flex-wrap items-center justify-between gap-4 p-5">
           <div className="flex items-center gap-6">
-            <Stat label="导入成功" value={result.imported} color="text-green-600" />
-            <Stat label="建立关系" value={result.relations} color="text-brand-600" />
-            <Stat label="失败" value={result.failed} color={result.failed ? "text-red-600" : "text-gray-400"} />
+            <Stat label={tr("导入成功", "Imported")} value={result.imported} color="text-green-600" />
+            <Stat label={tr("建立关系", "Relations created")} value={result.relations} color="text-brand-600" />
+            <Stat label={tr("失败", "Failed")} value={result.failed} color={result.failed ? "text-red-600" : "text-gray-400"} />
           </div>
           <Link to={`/objects/${result.target_object}`}>
-            <Button><Filter className="h-4 w-4" /> 去筛选 {byKey(result.target_object)?.label}</Button>
+            <Button><Filter className="h-4 w-4" /> {tr("去筛选 ", "Filter ")}{byKey(result.target_object)?.label}</Button>
           </Link>
         </Card>
       )}
       {result && result.errors.length > 0 && (
         <Card className="mt-3 p-4 text-sm text-red-600">
-          {result.errors.map((e, i) => <div key={i}>第 {e.row} 行：{e.error}</div>)}
+          {result.errors.map((e, i) => <div key={i}>{tr("第 ", "Row ")}{e.row}{tr(" 行：", ": ")}{e.error}</div>)}
         </Card>
       )}
     </Layout>

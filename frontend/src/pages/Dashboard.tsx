@@ -6,6 +6,7 @@ import { Card, Spinner } from "../components/ui";
 import { OBJECTS, byKey } from "../lib/objects";
 import { searchObjects, listTags, listSegments } from "../api/client";
 import { useTenant } from "../context/TenantContext";
+import { useLang } from "../context/LangContext";
 
 const COUNTED = ["user", "account", "order", "product", "store"];
 
@@ -22,6 +23,7 @@ const ROUTE: Record<string, string> = {
 
 export default function Dashboard() {
   const { tenant } = useTenant();
+  const { tr } = useLang();
   const [counts, setCounts] = useState<Record<string, number | null>>({});
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function Dashboard() {
   const cards = [...COUNTED, "tag", "segment"];
 
   return (
-    <Layout title="概览 Overview" subtitle="客户数据平台 · Connections → Unify → Engage 全链路概览">
+    <Layout title={tr("概览 Overview", "Overview")} subtitle={tr("客户数据平台 · Connections → Unify → Engage 全链路概览", "Customer Data Platform · Connections → Unify → Engage end-to-end overview")}>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-7">
         {cards.map((k) => {
           const cfg = byKey(k)!;
@@ -74,8 +76,8 @@ export default function Dashboard() {
                 <Filter className="h-6 w-6" />
               </div>
               <div>
-                <div className="font-semibold text-gray-900">创建受众 · Engage</div>
-                <div className="text-sm text-gray-500">多条件 / 跨对象 / 自然语言圈人</div>
+                <div className="font-semibold text-gray-900">{tr("创建受众 · Engage", "Create Audience · Engage")}</div>
+                <div className="text-sm text-gray-500">{tr("多条件 / 跨对象 / 自然语言圈人", "Multi-condition / cross-object / natural-language audiences")}</div>
               </div>
             </div>
             <ArrowRight className="h-5 w-5 text-gray-300" />
@@ -88,8 +90,8 @@ export default function Dashboard() {
                 <Workflow className="h-6 w-6" />
               </div>
               <div>
-                <div className="font-semibold text-gray-900">接入数据源 · Connections</div>
-                <div className="text-sm text-gray-500">多数据源 → 导入多对象</div>
+                <div className="font-semibold text-gray-900">{tr("接入数据源 · Connections", "Connect Sources · Connections")}</div>
+                <div className="text-sm text-gray-500">{tr("多数据源 → 导入多对象", "Multiple sources → import into multiple objects")}</div>
               </div>
             </div>
             <ArrowRight className="h-5 w-5 text-gray-300" />
@@ -98,7 +100,7 @@ export default function Dashboard() {
       </div>
 
       {Object.keys(counts).length < cards.length && (
-        <div className="mt-4 flex items-center gap-2 text-sm text-gray-400"><Spinner /> 统计加载中…</div>
+        <div className="mt-4 flex items-center gap-2 text-sm text-gray-400"><Spinner /> {tr("统计加载中…", "Loading stats…")}</div>
       )}
     </Layout>
   );

@@ -4,6 +4,7 @@ import Layout from "../../components/layout/Layout";
 import { Card, Button, DataTable, Modal, TextField, Spinner } from "../../components/ui";
 import { StatCards } from "../../components/segment/kit";
 import { useTenant } from "../../context/TenantContext";
+import { useLang } from "../../context/LangContext";
 import {
   listSqlTraits, createSqlTrait, executeSqlTrait, executeAllSqlTraits,
   type SqlTrait, type SqlTraitInput,
@@ -17,6 +18,16 @@ const EMPTY: SqlTraitInput = {
 
 export default function SqlTraitsPage() {
   const { tenant } = useTenant();
+  const { tr } = useLang();
+  const COL = {
+    trait: tr("特征", "Trait"),
+    code: tr("编码", "Code"),
+    warehouse: tr("数仓", "Warehouse"),
+    schedule: tr("调度", "Schedule"),
+    lastRun: tr("最近运行", "Last Run"),
+    rowCount: tr("命中行数", "Rows Hit"),
+    resultCount: tr("结果数", "Results"),
+  };
   const [rows, setRows] = useState<SqlTrait[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,23 +42,23 @@ export default function SqlTraitsPage() {
     try {
       setRows(await listSqlTraits(tenant));
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e.message || "加载失败");
+      setError(e?.response?.data?.detail || e.message || tr("加载失败", "Failed to load"));
     } finally {
       setLoading(false);
     }
-  }, [tenant]);
+  }, [tenant, tr]);
 
   useEffect(() => { load(); }, [load]);
 
   async function save() {
-    if (!form.trait_code.trim() || !form.sql_query.trim()) { setError("trait_code 与 SQL 必填"); return; }
+    if (!form.trait_code.trim() || !form.sql_query.trim()) { setError(tr("trait_code 与 SQL 必填", "trait_code and SQL are required")); return; }
     setSaving(true); setError(null);
     try {
       await createSqlTrait(tenant, form);
       setOpen(false); setForm(EMPTY);
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e.message || "保存失败");
+      setError(e?.response?.data?.detail || e.message || tr("保存失败", "Failed to save"));
     } finally {
       setSaving(false);
     }
@@ -57,10 +68,10 @@ export default function SqlTraitsPage() {
     setRunning(traitId); setError(null); setMsg(null);
     try {
       const r = await executeSqlTrait(tenant, traitId);
-      setMsg(`执行完成：写入 ${r.row_count} 行，用时 ${r.elapsed_ms}ms`);
+      setMsg(tr(`执行完成：写入 ${r.row_count} 行，用时 ${r.elapsed_ms}ms`, `Done: wrote ${r.row_count} rows in ${r.elapsed_ms}ms`));
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e.message || "执行失败");
+      setError(e?.response?.data?.detail || e.message || tr("执行失败", "Execution failed"));
     } finally {
       setRunning(null);
     }

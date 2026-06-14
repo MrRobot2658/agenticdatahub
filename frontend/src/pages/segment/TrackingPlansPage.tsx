@@ -5,6 +5,7 @@ import Layout from "../../components/layout/Layout";
 import { Button, Card, Modal, Spinner, TextField } from "../../components/ui";
 import { StatCards, StatusPill, EmptyState } from "../../components/segment/kit";
 import { useTenant } from "../../context/TenantContext";
+import { useLang } from "../../context/LangContext";
 import {
   listTrackingPlans, createTrackingPlan, deleteTrackingPlan,
   type TrackingPlan,
@@ -12,6 +13,7 @@ import {
 
 export default function TrackingPlansPage() {
   const { tenant } = useTenant();
+  const { tr } = useLang();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<TrackingPlan[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export default function TrackingPlansPage() {
   }
 
   async function remove(p: TrackingPlan) {
-    if (!confirm(`删除埋点计划「${p.name}」及其全部事件？`)) return;
+    if (!confirm(tr(`删除埋点计划「${p.name}」及其全部事件？`, `Delete tracking plan "${p.name}" and all its events?`))) return;
     try {
       await deleteTrackingPlan(tenant, p.id);
       load();
@@ -60,25 +62,25 @@ export default function TrackingPlansPage() {
 
   return (
     <Layout
-      title="埋点计划 Tracking Plans"
-      subtitle="校验事件 schema、治理数据质量，确保上报符合规范（来自 /protocols/tracking-plans）"
-      actions={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> 新建计划</Button>}
+      title={tr("埋点计划 Tracking Plans", "Tracking Plans")}
+      subtitle={tr("校验事件 schema、治理数据质量，确保上报符合规范（来自 /protocols/tracking-plans）", "Validate event schemas and govern data quality to ensure reports meet spec (from /protocols/tracking-plans)")}
+      actions={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {tr("新建计划", "New Plan")}</Button>}
     >
       <StatCards items={[
-        { label: "埋点计划数", value: total },
-        { label: "已启用", value: enabled },
-        { label: "已停用", value: total - enabled },
+        { label: tr("埋点计划数", "Tracking Plans"), value: total },
+        { label: tr("已启用", "Enabled"), value: enabled },
+        { label: tr("已停用", "Disabled"), value: total - enabled },
       ]} />
 
       {err && <Card className="mb-4 p-4 text-sm text-red-600">{err}</Card>}
-      {!plans && !err && <div className="flex items-center gap-2 text-gray-500"><Spinner /> 加载中…</div>}
+      {!plans && !err && <div className="flex items-center gap-2 text-gray-500"><Spinner /> {tr("加载中…", "Loading…")}</div>}
 
       {plans && plans.length === 0 && (
         <EmptyState
           icon={FileCheck2}
-          title="还没有埋点计划"
-          desc="创建埋点计划以定义事件 schema，校验上报数据质量。"
-          action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> 新建计划</Button>}
+          title={tr("还没有埋点计划", "No tracking plans yet")}
+          desc={tr("创建埋点计划以定义事件 schema，校验上报数据质量。", "Create a tracking plan to define event schemas and validate reported data quality.")}
+          action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {tr("新建计划", "New Plan")}</Button>}
         />
       )}
 

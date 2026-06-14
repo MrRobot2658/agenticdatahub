@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
   addEdge, useNodesState, useEdgesState, useReactFlow,
@@ -15,42 +15,45 @@ import {
 import Layout from "../components/layout/Layout";
 import { Button } from "../components/ui";
 import { MockTag } from "../components/segment/kit";
+import { useLang } from "../context/LangContext";
+
+type Tr = (zh: string, en?: string) => string;
 
 // 节点类别 —— source 只出、destination 只进、transform 进出
 type Kind = "source" | "transform" | "destination";
 interface NodeMeta { label: string; term: string; icon: LucideIcon; kind: Kind }
 
 // 调色板（左侧可拖拽节点），按 source → transform → destination 分组
-const PALETTE: { group: string; kind: Kind; items: (NodeMeta & { type: string })[] }[] = [
+const buildPalette = (tr: Tr): { group: string; kind: Kind; items: (NodeMeta & { type: string })[] }[] => [
   {
-    group: "数据源 Sources", kind: "source", items: [
-      { type: "csv", label: "CSV / 粘贴", term: "CSV", icon: FileSpreadsheet, kind: "source" },
+    group: tr("数据源 Sources", "Sources"), kind: "source", items: [
+      { type: "csv", label: tr("CSV / 粘贴", "CSV / Paste"), term: "CSV", icon: FileSpreadsheet, kind: "source" },
       { type: "mysql", label: "MySQL", term: "MySQL", icon: Database, kind: "source" },
       { type: "kafka", label: "Kafka", term: "Kafka", icon: Radio, kind: "source" },
       { type: "api", label: "REST API", term: "API", icon: Cloud, kind: "source" },
     ],
   },
   {
-    group: "转换 Transforms", kind: "transform", items: [
-      { type: "map", label: "字段映射", term: "Field Map", icon: Wand2, kind: "transform" },
-      { type: "filter", label: "过滤", term: "Filter", icon: Filter, kind: "transform" },
-      { type: "cast", label: "类型转换", term: "Cast", icon: Type, kind: "transform" },
-      { type: "relation", label: "建立关系", term: "Relation", icon: Link2, kind: "transform" },
+    group: tr("转换 Transforms", "Transforms"), kind: "transform", items: [
+      { type: "map", label: tr("字段映射", "Field Map"), term: "Field Map", icon: Wand2, kind: "transform" },
+      { type: "filter", label: tr("过滤", "Filter"), term: "Filter", icon: Filter, kind: "transform" },
+      { type: "cast", label: tr("类型转换", "Cast"), term: "Cast", icon: Type, kind: "transform" },
+      { type: "relation", label: tr("建立关系", "Relation"), term: "Relation", icon: Link2, kind: "transform" },
     ],
   },
   {
-    group: "目的地 Destinations", kind: "destination", items: [
-      { type: "object", label: "对象表", term: "Objects", icon: Boxes, kind: "destination" },
-      { type: "ads", label: "广告平台", term: "Ads", icon: Megaphone, kind: "destination" },
+    group: tr("目的地 Destinations", "Destinations"), kind: "destination", items: [
+      { type: "object", label: tr("对象表", "Objects"), term: "Objects", icon: Boxes, kind: "destination" },
+      { type: "ads", label: tr("广告平台", "Ads"), term: "Ads", icon: Megaphone, kind: "destination" },
       { type: "webhook", label: "Webhook", term: "Webhook", icon: Webhook, kind: "destination" },
-      { type: "warehouse", label: "数据仓库", term: "Warehouse", icon: Warehouse, kind: "destination" },
+      { type: "warehouse", label: tr("数据仓库", "Warehouse"), term: "Warehouse", icon: Warehouse, kind: "destination" },
     ],
   },
 ];
 
 // 扁平注册表：drop 时按 type 还原完整元数据（含图标，无法走 dataTransfer 序列化）
-const NODE_META: Record<string, NodeMeta> = Object.fromEntries(
-  PALETTE.flatMap((g) => g.items.map((i) => [i.type, { label: i.label, term: i.term, icon: i.icon, kind: i.kind }])),
+const buildNodeMeta = (tr: Tr): Record<string, NodeMeta> => Object.fromEntries(
+  buildPalette(tr).flatMap((g) => g.items.map((i) => [i.type, { label: i.label, term: i.term, icon: i.icon, kind: i.kind }])),
 );
 
 const KIND_STYLE: Record<Kind, { box: string; chip: string; dot: string }> = {
@@ -96,17 +99,24 @@ const defaultEdgeOptions = {
 };
 
 // 示例流程：CSV → 字段映射 → 对象表
-const SEED_NODES: Node[] = [
-  { id: "n-csv", type: "etl", position: { x: 40, y: 140 }, data: { ...NODE_META.csv } },
-  { id: "n-map", type: "etl", position: { x: 300, y: 140 }, data: { ...NODE_META.map } },
-  { id: "n-obj", type: "etl", position: { x: 560, y: 140 }, data: { ...NODE_META.object } },
-];
+const buildSeedNodes = (tr: Tr): Node[] => {
+  const meta = buildNodeMeta(tr);
+  return [
+    { id: "n-csv", type: "etl", position: { x: 40, y: 140 }, data: { ...meta.csv } },
+    { id: "n-map", type: "etl", position: { x: 300, y: 140 }, data: { ...meta.map } },
+    { id: "n-obj", type: "etl", position: { x: 560, y: 140 }, data: { ...meta.object } },
+  ];
+};
 const SEED_EDGES: Edge[] = [
   { id: "e1", source: "n-csv", target: "n-map" },
   { id: "e2", source: "n-map", target: "n-obj" },
 ];
 
 function FlowCanvas() {
+  const { tr } = useLang();
+  const PALETTE = useMemo(() => buildPalette(tr), [tr]);
+  const NODE_META = useMemo(() => buildNodeMeta(tr), [tr]);
+  const SEED_NODES = useMemo(() => buildSeedNodes(tr), [tr]);
   const wrapper = useRef<HTMLDivElement>(null);
   const idRef = useRef(1);
   const [nodes, setNodes, onNodesChange] = useNodesState(SEED_NODES);
@@ -133,7 +143,7 @@ function FlowCanvas() {
       const id = `n-${type}-${idRef.current++}`;
       setNodes((nds) => nds.concat({ id, type: "etl", position, data: { ...meta } }));
     },
-    [screenToFlowPosition, setNodes],
+    [screenToFlowPosition, setNodes, NODE_META],
   );
 
   const clear = () => { setNodes([]); setEdges([]); };
@@ -144,7 +154,7 @@ function FlowCanvas() {
       {/* 左侧：可拖拽节点面板 */}
       <aside className="w-56 shrink-0 overflow-y-auto border-r border-gray-200 bg-gray-50 p-3">
         <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-          节点 · 拖到右侧画布
+          {tr("节点 · 拖到右侧画布", "Nodes · drag onto canvas")}
         </div>
         {PALETTE.map((g) => (
           <div key={g.group} className="mb-4">
@@ -178,10 +188,10 @@ function FlowCanvas() {
       <div className="relative flex-1" ref={wrapper}>
         <div className="absolute left-3 top-3 z-10 flex gap-2">
           <Button variant="outline" onClick={loadSeed} className="!py-1.5 !text-xs">
-            <Sparkles className="h-3.5 w-3.5" /> 示例流程
+            <Sparkles className="h-3.5 w-3.5" /> {tr("示例流程", "Example flow")}
           </Button>
           <Button variant="outline" onClick={clear} className="!py-1.5 !text-xs">
-            <Trash2 className="h-3.5 w-3.5" /> 清空
+            <Trash2 className="h-3.5 w-3.5" /> {tr("清空", "Clear")}
           </Button>
         </div>
         <ReactFlow
@@ -207,16 +217,17 @@ function FlowCanvas() {
 }
 
 export default function EtlFlowPage() {
+  const { tr } = useLang();
   const [saved, setSaved] = useState(false);
   return (
     <Layout
-      title="可视化编排 Pipelines"
-      subtitle="从数据源到目的地：左侧拖出节点，在画布上连线编排 ETL 流程（拖拽节点、连接把手、Backspace 删除）"
+      title={tr("可视化编排 Pipelines", "Pipelines")}
+      subtitle={tr("从数据源到目的地：左侧拖出节点，在画布上连线编排 ETL 流程（拖拽节点、连接把手、Backspace 删除）", "From sources to destinations: drag nodes from the left and connect them on the canvas to orchestrate ETL flows (drag nodes, connect handles, Backspace to delete)")}
       actions={
         <>
-          <MockTag>未接后端</MockTag>
+          <MockTag>{tr("未接后端", "No backend")}</MockTag>
           <Button onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 1800); }}>
-            <Save className="h-4 w-4" /> {saved ? "已保存" : "保存流程"}
+            <Save className="h-4 w-4" /> {saved ? tr("已保存", "Saved") : tr("保存流程", "Save flow")}
           </Button>
         </>
       }

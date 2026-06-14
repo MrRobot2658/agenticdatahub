@@ -6,6 +6,7 @@ import { Card, Badge, Spinner } from "../../components/ui";
 import { Timeline, type TimelineItem } from "../../components/segment/kit";
 import { searchObjects } from "../../api/client";
 import { useTenant } from "../../context/TenantContext";
+import { useLang } from "../../context/LangContext";
 
 // 用户档案详情 —— 真实数据：按 one_id 查 doris_user_wide，渲染身份标识 / 特征 / 行为时间线。
 const ID_FIELDS = ["one_id", "phone", "email", "wechat_openid", "wechat_unionid", "wework_extid", "form_id", "device"];
@@ -13,6 +14,7 @@ const ID_FIELDS = ["one_id", "phone", "email", "wechat_openid", "wechat_unionid"
 export default function ProfileDetailPage() {
   const { id = "" } = useParams();
   const { tenant } = useTenant();
+  const { tr } = useLang();
   const [row, setRow] = useState<Record<string, any> | null | undefined>(undefined);
   const [err, setErr] = useState<string | null>(null);
 
@@ -25,13 +27,13 @@ export default function ProfileDetailPage() {
 
   const back = (
     <Link to="/unify" className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-      <ArrowLeft className="h-4 w-4" /> 返回
+      <ArrowLeft className="h-4 w-4" /> {tr("返回", "Back")}
     </Link>
   );
 
-  if (err) return <Layout title="用户档案" actions={back}><Card className="p-5 text-sm text-red-600">{err}</Card></Layout>;
-  if (row === undefined) return <Layout title="用户档案" actions={back}><div className="flex items-center gap-2 text-gray-500"><Spinner /> 加载中…</div></Layout>;
-  if (row === null) return <Layout title="用户档案" actions={back}><Card className="p-6 text-sm text-gray-500">未找到 OneID {id} 的用户</Card></Layout>;
+  if (err) return <Layout title={tr("用户档案", "User Profile")} actions={back}><Card className="p-5 text-sm text-red-600">{err}</Card></Layout>;
+  if (row === undefined) return <Layout title={tr("用户档案", "User Profile")} actions={back}><div className="flex items-center gap-2 text-gray-500"><Spinner /> {tr("加载中…", "Loading…")}</div></Layout>;
+  if (row === null) return <Layout title={tr("用户档案", "User Profile")} actions={back}><Card className="p-6 text-sm text-gray-500">{tr(`未找到 OneID ${id} 的用户`, `No user found for OneID ${id}`)}</Card></Layout>;
 
   const props = (row.properties || {}) as Record<string, any>;
   const tags: string[] = Array.isArray(row.tags) ? row.tags : [];
@@ -48,11 +50,11 @@ export default function ProfileDetailPage() {
     }));
 
   return (
-    <Layout title={`OneID ${row.one_id} · 用户档案`} subtitle={`渠道数 ${row.channel_count ?? 0} · 标签 ${tags.length}`} actions={back}>
+    <Layout title={tr(`OneID ${row.one_id} · 用户档案`, `OneID ${row.one_id} · User Profile`)} subtitle={tr(`渠道数 ${row.channel_count ?? 0} · 标签 ${tags.length}`, `Channels ${row.channel_count ?? 0} · Tags ${tags.length}`)} actions={back}>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-1">
           <Card className="p-5">
-            <div className="mb-3 font-semibold text-gray-900">身份标识 Identifiers</div>
+            <div className="mb-3 font-semibold text-gray-900">{tr("身份标识 Identifiers", "Identifiers")}</div>
             <dl className="space-y-2">
               {identifiers.map((id) => (
                 <div key={id.type} className="flex items-center justify-between gap-3 text-sm">
@@ -63,7 +65,7 @@ export default function ProfileDetailPage() {
             </dl>
           </Card>
           <Card className="p-5">
-            <div className="mb-3 font-semibold text-gray-900">特征 Traits</div>
+            <div className="mb-3 font-semibold text-gray-900">{tr("特征 Traits", "Traits")}</div>
             <dl className="space-y-2 text-sm">
               <Row label="channel_count" value={row.channel_count ?? "—"} />
               <Row label="total_orders" value={props.total_orders ?? "—"} />
@@ -73,7 +75,7 @@ export default function ProfileDetailPage() {
               <div>
                 <div className="mb-1 text-gray-500">tags</div>
                 <div className="flex flex-wrap gap-1.5">
-                  {tags.length ? tags.map((t) => <Badge key={t} color="brand">{t}</Badge>) : <span className="text-gray-400">无</span>}
+                  {tags.length ? tags.map((t) => <Badge key={t} color="brand">{t}</Badge>) : <span className="text-gray-400">{tr("无", "None")}</span>}
                 </div>
               </div>
             </dl>
@@ -81,8 +83,8 @@ export default function ProfileDetailPage() {
         </div>
         <div className="lg:col-span-2">
           <Card className="p-5">
-            <div className="mb-4 font-semibold text-gray-900">行为时间线 Event Timeline</div>
-            {events.length ? <Timeline items={events} /> : <div className="text-sm text-gray-400">暂无行为记录</div>}
+            <div className="mb-4 font-semibold text-gray-900">{tr("行为时间线 Event Timeline", "Event Timeline")}</div>
+            {events.length ? <Timeline items={events} /> : <div className="text-sm text-gray-400">{tr("暂无行为记录", "No event records")}</div>}
           </Card>
         </div>
       </div>

@@ -5,6 +5,7 @@ import Layout from "../../components/layout/Layout";
 import { Button, Card, Modal, Spinner, TextField } from "../../components/ui";
 import { StatCards, StatusPill, EmptyState } from "../../components/segment/kit";
 import { useTenant } from "../../context/TenantContext";
+import { useLang } from "../../context/LangContext";
 import {
   getTrackingPlan, listPlanEvents, createPlanEvent, deletePlanEvent, validateEvent,
   type TrackingPlan, type PlanEvent, type ValidateResult,
@@ -12,6 +13,7 @@ import {
 
 export default function TrackingPlanDetailPage() {
   const { tenant } = useTenant();
+  const { tr } = useLang();
   const { id } = useParams();
   const planId = Number(id);
   const navigate = useNavigate();
@@ -66,7 +68,7 @@ export default function TrackingPlanDetailPage() {
   }
 
   async function removeEvent(ev: PlanEvent) {
-    if (!confirm(`删除事件「${ev.event}」？`)) return;
+    if (!confirm(tr(`删除事件「${ev.event}」？`, `Delete event "${ev.event}"?`))) return;
     try { await deletePlanEvent(tenant, ev.id); load(); }
     catch (e) { setErr(String(e)); }
   }
@@ -101,36 +103,36 @@ export default function TrackingPlanDetailPage() {
 
   return (
     <Layout
-      title={plan ? `埋点计划 · ${plan.name}` : "埋点计划"}
-      subtitle={plan?.description || "管理该计划下的事件 schema 与必填属性，并对载荷做校验"}
+      title={plan ? `${tr("埋点计划", "Tracking Plan")} · ${plan.name}` : tr("埋点计划", "Tracking Plan")}
+      subtitle={plan?.description || tr("管理该计划下的事件 schema 与必填属性，并对载荷做校验", "Manage event schemas and required properties under this plan, and validate payloads")}
       actions={
         <>
           <Button variant="outline" onClick={() => navigate("/protocols")}>
-            <ArrowLeft className="h-4 w-4" /> 返回
+            <ArrowLeft className="h-4 w-4" /> {tr("返回", "Back")}
           </Button>
           <Button variant="outline" onClick={() => openValidate()}>
-            <ShieldCheck className="h-4 w-4" /> 校验事件
+            <ShieldCheck className="h-4 w-4" /> {tr("校验事件", "Validate Event")}
           </Button>
-          <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> 新建事件</Button>
+          <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {tr("新建事件", "New Event")}</Button>
         </>
       }
     >
       <StatCards items={[
-        { label: "事件总数", value: total },
-        { label: "已批准", value: approved },
-        { label: "草稿", value: total - approved },
-        { label: "数据源", value: (plan?.sources || []).join(", ") || "—" },
+        { label: tr("事件总数", "Total Events"), value: total },
+        { label: tr("已批准", "Approved"), value: approved },
+        { label: tr("草稿", "Draft"), value: total - approved },
+        { label: tr("数据源", "Sources"), value: (plan?.sources || []).join(", ") || "—" },
       ]} />
 
       {err && <Card className="mb-4 p-4 text-sm text-red-600">{err}</Card>}
-      {!events && !err && <div className="flex items-center gap-2 text-gray-500"><Spinner /> 加载中…</div>}
+      {!events && !err && <div className="flex items-center gap-2 text-gray-500"><Spinner /> {tr("加载中…", "Loading…")}</div>}
 
       {events && events.length === 0 && (
         <EmptyState
           icon={ShieldCheck}
-          title="该计划暂无事件"
-          desc="添加事件 schema 以定义属性、类型与必填项。"
-          action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> 新建事件</Button>}
+          title={tr("该计划暂无事件", "No events in this plan")}
+          desc={tr("添加事件 schema 以定义属性、类型与必填项。", "Add an event schema to define properties, types and required fields.")}
+          action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {tr("新建事件", "New Event")}</Button>}
         />
       )}
 
@@ -139,12 +141,12 @@ export default function TrackingPlanDetailPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wider text-gray-400">
-                <th className="px-4 py-3 font-semibold">事件</th>
-                <th className="px-4 py-3 font-semibold">类型</th>
-                <th className="px-4 py-3 font-semibold">属性数</th>
-                <th className="px-4 py-3 font-semibold">必填</th>
-                <th className="px-4 py-3 font-semibold">状态</th>
-                <th className="px-4 py-3 font-semibold">操作</th>
+                <th className="px-4 py-3 font-semibold">{tr("事件", "Event")}</th>
+                <th className="px-4 py-3 font-semibold">{tr("类型", "Type")}</th>
+                <th className="px-4 py-3 font-semibold">{tr("属性数", "Properties")}</th>
+                <th className="px-4 py-3 font-semibold">{tr("必填", "Required")}</th>
+                <th className="px-4 py-3 font-semibold">{tr("状态", "Status")}</th>
+                <th className="px-4 py-3 font-semibold">{tr("操作", "Actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -156,13 +158,13 @@ export default function TrackingPlanDetailPage() {
                   <td className="px-4 py-3 text-gray-500">{(ev.required || []).join(", ") || "—"}</td>
                   <td className="px-4 py-3">
                     {ev.status === "approved"
-                      ? <StatusPill tone="green">已批准</StatusPill>
-                      : <StatusPill tone="amber">草稿</StatusPill>}
+                      ? <StatusPill tone="green">{tr("已批准", "Approved")}</StatusPill>
+                      : <StatusPill tone="amber">{tr("草稿", "Draft")}</StatusPill>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <button className="text-xs text-brand-600 hover:underline" onClick={() => openValidate(ev.event)}>校验</button>
-                      <button className="text-gray-400 hover:text-red-600" onClick={() => removeEvent(ev)} title="删除">
+                      <button className="text-xs text-brand-600 hover:underline" onClick={() => openValidate(ev.event)}>{tr("校验", "Validate")}</button>
+                      <button className="text-gray-400 hover:text-red-600" onClick={() => removeEvent(ev)} title={tr("删除", "Delete")}>
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -175,43 +177,43 @@ export default function TrackingPlanDetailPage() {
       )}
 
       {/* 新建事件 */}
-      <Modal open={open} title="新建事件 Schema" onClose={() => setOpen(false)}>
+      <Modal open={open} title={tr("新建事件 Schema", "New Event Schema")} onClose={() => setOpen(false)}>
         <div className="space-y-4">
-          <TextField label="事件名" value={evName} onChange={setEvName} placeholder="如：Order Completed" />
+          <TextField label={tr("事件名", "Event Name")} value={evName} onChange={setEvName} placeholder={tr("如：Order Completed", "e.g. Order Completed")} />
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-gray-700">类型</span>
+            <span className="mb-1 block text-sm font-medium text-gray-700">{tr("类型", "Type")}</span>
             <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
               value={evType} onChange={(e) => setEvType(e.target.value)}>
               <option value="track">track</option>
               <option value="identify">identify</option>
             </select>
           </label>
-          <TextField label="必填属性（逗号分隔）" value={evRequired} onChange={setEvRequired} placeholder="order_id, total" />
+          <TextField label={tr("必填属性（逗号分隔）", "Required Properties (comma-separated)")} value={evRequired} onChange={setEvRequired} placeholder="order_id, total" />
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-gray-700">属性 schema（JSON，属性名→类型）</span>
+            <span className="mb-1 block text-sm font-medium text-gray-700">{tr("属性 schema（JSON，属性名→类型）", "Property Schema (JSON, name → type)")}</span>
             <textarea className="h-28 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs focus:border-brand-400 focus:outline-none"
               value={evProps} onChange={(e) => setEvProps(e.target.value)}
               placeholder={'{ "order_id": "string", "total": "number" }'} />
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
-            <Button onClick={createEvent} disabled={busy || !evName.trim()}>{busy ? "创建中…" : "创建"}</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>{tr("取消", "Cancel")}</Button>
+            <Button onClick={createEvent} disabled={busy || !evName.trim()}>{busy ? tr("创建中…", "Creating…") : tr("创建", "Create")}</Button>
           </div>
         </div>
       </Modal>
 
       {/* 校验事件载荷 */}
-      <Modal open={valOpen} title="校验事件载荷" onClose={() => setValOpen(false)}>
+      <Modal open={valOpen} title={tr("校验事件载荷", "Validate Event Payload")} onClose={() => setValOpen(false)}>
         <div className="space-y-4">
-          <TextField label="事件名" value={valEvent} onChange={setValEvent} placeholder="如：Order Completed" />
+          <TextField label={tr("事件名", "Event Name")} value={valEvent} onChange={setValEvent} placeholder={tr("如：Order Completed", "e.g. Order Completed")} />
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-gray-700">载荷 properties（JSON）</span>
+            <span className="mb-1 block text-sm font-medium text-gray-700">{tr("载荷 properties（JSON）", "Payload properties (JSON)")}</span>
             <textarea className="h-28 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs focus:border-brand-400 focus:outline-none"
               value={valPayload} onChange={(e) => setValPayload(e.target.value)} />
           </label>
           {valResult && (
             <div className={`rounded-lg p-3 text-sm ${valResult.valid ? "bg-brand-50 text-brand-700" : "bg-red-50 text-red-700"}`}>
-              {valResult.valid ? "校验通过，符合 schema。" : (
+              {valResult.valid ? tr("校验通过，符合 schema。", "Validation passed, conforms to schema.") : (
                 <ul className="list-disc pl-4">
                   {valResult.issues.map((it, i) => <li key={i}>{it}</li>)}
                 </ul>
@@ -219,8 +221,8 @@ export default function TrackingPlanDetailPage() {
             </div>
           )}
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setValOpen(false)}>关闭</Button>
-            <Button onClick={runValidate} disabled={valBusy || !valEvent.trim()}>{valBusy ? "校验中…" : "校验"}</Button>
+            <Button variant="outline" onClick={() => setValOpen(false)}>{tr("关闭", "Close")}</Button>
+            <Button onClick={runValidate} disabled={valBusy || !valEvent.trim()}>{valBusy ? tr("校验中…", "Validating…") : tr("校验", "Validate")}</Button>
           </div>
         </div>
       </Modal>

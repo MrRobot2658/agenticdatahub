@@ -4,6 +4,7 @@ import Layout from "../../components/layout/Layout";
 import { Card, Button, Modal, TextField, Spinner } from "../../components/ui";
 import { StatusPill, EmptyState } from "../../components/segment/kit";
 import { useTenant } from "../../context/TenantContext";
+import { useLang } from "../../context/LangContext";
 import {
   listPredictions, createPrediction, inferPrediction,
   type PredictionModel, type PredictionModelInput,
@@ -16,6 +17,7 @@ const EMPTY: PredictionModelInput = {
 
 export default function PredictionsPage() {
   const { tenant } = useTenant();
+  const { tr } = useLang();
   const [models, setModels] = useState<PredictionModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export default function PredictionsPage() {
     try {
       setModels(await listPredictions(tenant));
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e.message || "加载失败");
+      setError(e?.response?.data?.detail || e.message || tr("加载失败", "Failed to load"));
     } finally {
       setLoading(false);
     }
@@ -40,7 +42,7 @@ export default function PredictionsPage() {
   useEffect(() => { load(); }, [load]);
 
   async function save() {
-    if (!form.model_name.trim()) { setError("请填写模型名"); return; }
+    if (!form.model_name.trim()) { setError(tr("请填写模型名", "Please enter a model name")); return; }
     setSaving(true); setError(null);
     try {
       await createPrediction(tenant, {
@@ -50,7 +52,7 @@ export default function PredictionsPage() {
       setOpen(false); setForm(EMPTY); setFeaturesText("");
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e.message || "保存失败");
+      setError(e?.response?.data?.detail || e.message || tr("保存失败", "Failed to save"));
     } finally {
       setSaving(false);
     }
@@ -60,10 +62,13 @@ export default function PredictionsPage() {
     setInferring(modelId); setError(null); setMsg(null);
     try {
       const r = await inferPrediction(tenant, modelId);
-      setMsg(`推理完成：写入 ${r.row_count} 个档案 ${r.property_key}，质量评分 ${r.quality_score}`);
+      setMsg(tr(
+        `推理完成：写入 ${r.row_count} 个档案 ${r.property_key}，质量评分 ${r.quality_score}`,
+        `Inference complete: wrote ${r.row_count} profiles ${r.property_key}, quality score ${r.quality_score}`,
+      ));
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e.message || "推理失败");
+      setError(e?.response?.data?.detail || e.message || tr("推理失败", "Inference failed"));
     } finally {
       setInferring(null);
     }
@@ -71,10 +76,10 @@ export default function PredictionsPage() {
 
   return (
     <Layout
-      title="预测 Predictions"
-      subtitle="基于用户行为训练的倾向性预测模型（评分写入用户宽表 properties）"
+      title={tr("预测 Predictions", "Predictions")}
+      subtitle={tr("基于用户行为训练的倾向性预测模型（评分写入用户宽表 properties）", "Propensity prediction models trained on user behavior (scores written to the user wide-table properties)")}
       actions={<Button onClick={() => { setForm(EMPTY); setFeaturesText(""); setError(null); setOpen(true); }}>
-        <Plus className="h-4 w-4" /> 新建模型
+        <Plus className="h-4 w-4" /> {tr("新建模型", "New Model")}
       </Button>}
     >
       {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{error}</div>}
@@ -83,9 +88,9 @@ export default function PredictionsPage() {
       {loading ? (
         <div className="flex justify-center py-12"><Spinner /></div>
       ) : models.length === 0 ? (
-        <EmptyState icon={Sparkles} title="暂无预测模型"
-          desc="创建一个倾向性预测模型（购买 / 流失 / LTV），推理后评分回填到用户档案。"
-          action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> 新建模型</Button>} />
+        <EmptyState icon={Sparkles} title={tr("暂无预测模型", "No prediction models yet")}
+          desc={tr("创建一个倾向性预测模型（购买 / 流失 / LTV），推理后评分回填到用户档案。", "Create a propensity prediction model (purchase / churn / LTV); scores are written back to user profiles after inference.")}
+          action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {tr("新建模型", "New Model")}</Button>} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {models.map((m) => (
@@ -95,20 +100,20 @@ export default function PredictionsPage() {
                   <Sparkles className="h-5 w-5" />
                 </div>
                 <StatusPill tone={m.last_inference_at ? "green" : "gray"}>
-                  {m.last_inference_at ? "已推理" : "未推理"}
+                  {m.last_inference_at ? tr("已推理", "Inferred") : tr("未推理", "Not inferred")}
                 </StatusPill>
               </div>
               <div className="font-semibold text-gray-900">{m.model_name}</div>
               <div className="text-[11px] uppercase tracking-wide text-gray-400">{m.model_type}</div>
               <div className="mt-1 text-sm text-gray-500">
-                目标 {m.target_event || "—"} · 窗口 {m.inference_horizon || "—"}
+                {tr("目标", "Target")} {m.target_event || "—"} · {tr("窗口", "Window")} {m.inference_horizon || "—"}
               </div>
               <div className="mt-1 text-sm text-gray-500">
-                质量评分 {m.quality_score ?? "—"} · 特征 {m.features?.length || 0} 个
+                {tr("质量评分", "Quality Score")} {m.quality_score ?? "—"} · {tr("特征", "Features")} {m.features?.length || 0}
               </div>
               <div className="mt-4">
                 <Button variant="outline" onClick={() => infer(m.model_id)} disabled={inferring === m.model_id}>
-                  <Sparkles className="h-4 w-4" /> {inferring === m.model_id ? "推理中…" : "运行推理"}
+                  <Sparkles className="h-4 w-4" /> {inferring === m.model_id ? tr("推理中…", "Inferring…") : tr("运行推理", "Run Inference")}
                 </Button>
               </div>
             </Card>
@@ -116,29 +121,29 @@ export default function PredictionsPage() {
         </div>
       )}
 
-      <Modal open={open} title="新建预测模型" onClose={() => setOpen(false)}>
+      <Modal open={open} title={tr("新建预测模型", "New Prediction Model")} onClose={() => setOpen(false)}>
         <div className="space-y-3">
-          <TextField label="模型名" value={form.model_name}
-            placeholder="购买倾向" onChange={(v) => setForm({ ...form, model_name: v })} />
+          <TextField label={tr("模型名", "Model Name")} value={form.model_name}
+            placeholder={tr("购买倾向", "Purchase propensity")} onChange={(v) => setForm({ ...form, model_name: v })} />
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-gray-700">模型类型</span>
+            <span className="mb-1 block text-sm font-medium text-gray-700">{tr("模型类型", "Model Type")}</span>
             <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               value={form.model_type}
               onChange={(e) => setForm({ ...form, model_type: e.target.value })}>
-              <option value="purchase">purchase（购买倾向）</option>
-              <option value="churn">churn（流失倾向）</option>
-              <option value="ltv">ltv（生命周期价值）</option>
+              <option value="purchase">{tr("purchase（购买倾向）", "purchase (purchase propensity)")}</option>
+              <option value="churn">{tr("churn（流失倾向）", "churn (churn propensity)")}</option>
+              <option value="ltv">{tr("ltv（生命周期价值）", "ltv (lifetime value)")}</option>
             </select>
           </label>
-          <TextField label="目标事件" value={form.target_event ?? ""}
+          <TextField label={tr("目标事件", "Target Event")} value={form.target_event ?? ""}
             placeholder="order_paid" onChange={(v) => setForm({ ...form, target_event: v })} />
-          <TextField label="推理窗口" value={form.inference_horizon ?? ""}
+          <TextField label={tr("推理窗口", "Inference Window")} value={form.inference_horizon ?? ""}
             placeholder="14d" onChange={(v) => setForm({ ...form, inference_horizon: v })} />
-          <TextField label="特征（逗号分隔）" value={featuresText}
+          <TextField label={tr("特征（逗号分隔）", "Features (comma-separated)")} value={featuresText}
             placeholder="total_orders, channel_count" onChange={setFeaturesText} />
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
-            <Button onClick={save} disabled={saving}>{saving ? "保存中…" : "保存"}</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>{tr("取消", "Cancel")}</Button>
+            <Button onClick={save} disabled={saving}>{saving ? tr("保存中…", "Saving…") : tr("保存", "Save")}</Button>
           </div>
         </div>
       </Modal>

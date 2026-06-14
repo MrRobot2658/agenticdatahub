@@ -3,27 +3,36 @@ import Layout from "../../components/layout/Layout";
 import { Card, Button, DataTable } from "../../components/ui";
 import { StatCards, MockTag } from "../../components/segment/kit";
 import { alerts } from "../../mock/data";
+import { useLang } from "../../context/LangContext";
 
 export default function AlertsPage() {
+  const { tr } = useLang();
+  const COL = {
+    rule: tr("规则", "Rule"),
+    channel: tr("通知渠道", "Notification Channel"),
+    scope: tr("范围", "Scope"),
+    status: tr("状态", "Status"),
+    last: tr("最近触发", "Last Triggered"),
+  };
   return (
     <Layout
-      title="告警 Alerts"
-      subtitle="为投递成功率、事件量与违规设置阈值，触发即通知"
-      actions={<><MockTag /><Button><Plus className="h-4 w-4" /> 新建告警</Button></>}
+      title={tr("告警 Alerts", "Alerts")}
+      subtitle={tr("为投递成功率、事件量与违规设置阈值，触发即通知", "Set thresholds for delivery success rate, event volume and violations, and get notified on trigger")}
+      actions={<><MockTag /><Button><Plus className="h-4 w-4" /> {tr("新建告警", "New Alert")}</Button></>}
     >
       <StatCards items={[
-        { label: "告警规则", value: alerts.length },
-        { label: "已触发", value: alerts.filter((a) => a.status === "已触发").length },
+        { label: tr("告警规则", "Alert Rules"), value: alerts.length },
+        { label: tr("已触发", "Triggered"), value: alerts.filter((a) => a.status === "已触发").length },
       ]} />
       <Card className="p-2">
         <DataTable
-          columns={["规则", "通知渠道", "范围", "状态", "最近触发"]}
+          columns={[COL.rule, COL.channel, COL.scope, COL.status, COL.last]}
           rows={alerts.map((a) => ({
-            "规则": a.name,
-            "通知渠道": a.channel,
-            "范围": a.scope,
-            "状态": a.status,
-            "最近触发": a.last,
+            [COL.rule]: a.name,
+            [COL.channel]: a.channel,
+            [COL.scope]: a.scope,
+            [COL.status]: a.status,
+            [COL.last]: a.last,
           }))}
         />
       </Card>

@@ -3,28 +3,37 @@ import Layout from "../../components/layout/Layout";
 import { Card, Button, DataTable } from "../../components/ui";
 import { StatCards, MockTag } from "../../components/segment/kit";
 import { deletionRequests } from "../../mock/data";
+import { useLang } from "../../context/LangContext";
 
 export default function DeletionPage() {
+  const { tr } = useLang();
+  const COL = {
+    id: tr("请求ID", "Request ID"),
+    subject: tr("主体", "Subject"),
+    type: tr("类型", "Type"),
+    requested: tr("提交时间", "Submitted"),
+    status: tr("状态", "Status"),
+  };
   return (
     <Layout
-      title="数据删除 Deletion"
-      subtitle="处理 GDPR 删除与抑制请求，跟踪每个数据主体的处理进度"
-      actions={<><MockTag /><Button><Plus className="h-4 w-4" /> 新建删除请求</Button></>}
+      title={tr("数据删除 Deletion", "Deletion")}
+      subtitle={tr("处理 GDPR 删除与抑制请求，跟踪每个数据主体的处理进度", "Handle GDPR deletion and suppression requests, and track the progress for each data subject")}
+      actions={<><MockTag /><Button><Plus className="h-4 w-4" /> {tr("新建删除请求", "New deletion request")}</Button></>}
     >
       <StatCards items={[
-        { label: "请求总数", value: deletionRequests.length },
-        { label: "处理中", value: deletionRequests.filter((r) => r.status === "处理中").length },
-        { label: "已完成", value: deletionRequests.filter((r) => r.status === "已完成").length },
+        { label: tr("请求总数", "Total requests"), value: deletionRequests.length },
+        { label: tr("处理中", "In progress"), value: deletionRequests.filter((r) => r.status === "处理中").length },
+        { label: tr("已完成", "Completed"), value: deletionRequests.filter((r) => r.status === "已完成").length },
       ]} />
       <Card className="p-2">
         <DataTable
-          columns={["请求ID", "主体", "类型", "提交时间", "状态"]}
+          columns={[COL.id, COL.subject, COL.type, COL.requested, COL.status]}
           rows={deletionRequests.map((r) => ({
-            "请求ID": r.id,
-            "主体": r.subject,
-            "类型": r.type,
-            "提交时间": r.requested,
-            "状态": r.status,
+            [COL.id]: r.id,
+            [COL.subject]: r.subject,
+            [COL.type]: r.type,
+            [COL.requested]: r.requested,
+            [COL.status]: r.status,
           }))}
         />
       </Card>

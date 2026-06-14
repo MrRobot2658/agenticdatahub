@@ -4,6 +4,7 @@ import Layout from "../components/layout/Layout";
 import { Card, DataTable, Spinner, Button, Modal, TextField, Badge } from "../components/ui";
 import { StatCards } from "../components/segment/kit";
 import { useTenant } from "../context/TenantContext";
+import { useLang } from "../context/LangContext";
 import { byKey } from "../lib/objects";
 import {
   getDefinitions, createObject, addField, patchField,
@@ -12,10 +13,11 @@ import {
 } from "../api/objects";
 
 const FIELD_TYPES = ["str", "int", "float", "datetime", "json", "json_array"];
-const TYPE_LABEL: Record<string, string> = {
-  str: "文本", int: "整数", float: "小数", datetime: "时间",
-  json: "JSON", json_array: "JSON 数组",
-};
+// 类型显示名映射：接收 tr，避免在模块级调用 useLang
+const typeLabels = (tr: (zh: string, en?: string) => string): Record<string, string> => ({
+  str: tr("文本", "Text"), int: tr("整数", "Integer"), float: tr("小数", "Decimal"),
+  datetime: tr("时间", "Datetime"), json: "JSON", json_array: tr("JSON 数组", "JSON Array"),
+});
 const objLabel = (k: string) => byKey(k)?.label ?? k;
 
 // 原生下拉，样式与 TextField 对齐
@@ -39,6 +41,7 @@ function SelectField({ label, value, onChange, options }: {
 
 export default function ObjectModelPage() {
   const { tenant } = useTenant();
+  const { tr } = useLang();
   const [defs, setDefs] = useState<ObjectDefinitions | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,31 +64,37 @@ export default function ObjectModelPage() {
     [defs],
   );
 
+  // 关系表列名（列名须与行键一致才能渲染）
+  const REL_COL = {
+    src: tr("源对象", "Source"), rel: tr("关系", "Relation"), dst: tr("目标对象", "Target"),
+    edge: tr("边字段", "Edge Fields"), ops: tr("操作", "Actions"),
+  };
+
   return (
     <Layout
-      title="对象模型 Data Model"
-      subtitle="管理对象定义、字段与跨对象关系 —— DSL 校验 / ETL / 筛选器均以此为单一事实源"
+      title={tr("对象模型 Data Model", "Data Model")}
+      subtitle={tr("管理对象定义、字段与跨对象关系 —— DSL 校验 / ETL / 筛选器均以此为单一事实源", "Manage object definitions, fields and cross-object relations — the single source of truth for DSL validation / ETL / filters")}
       actions={
         <>
           <Button variant="outline" onClick={() => setNewRel(true)} disabled={!defs}>
-            <GitBranch className="h-4 w-4" /> 新建关系
+            <GitBranch className="h-4 w-4" /> {tr("新建关系", "New Relation")}
           </Button>
           <Button onClick={() => setNewObj(true)}>
-            <Plus className="h-4 w-4" /> 新建对象
+            <Plus className="h-4 w-4" /> {tr("新建对象", "New Object")}
           </Button>
         </>
       }
     >
       {err && <Card className="mb-4 p-5 text-sm text-red-600">{err}</Card>}
-      {!defs && !err && <div className="flex items-center gap-2 text-gray-500"><Spinner /> 加载中…</div>}
+      {!defs && !err && <div className="flex items-center gap-2 text-gray-500"><Spinner /> {tr("加载中…", "Loading…")}</div>}
 
       {defs && (
         <>
           <StatCards items={[
-            { label: "对象数", value: defs.objects.length },
-            { label: "字段总数", value: fieldTotal },
-            { label: "关系数", value: defs.relations.length },
-            { label: "租户", value: tenant },
+            { label: tr("对象数", "Objects"), value: defs.objects.length },
+            { label: tr("字段总数", "Total Fields"), value: fieldTotal },
+            { label: tr("关系数", "Relations"), value: defs.relations.length },
+            { label: tr("租户", "Tenant"), value: tenant },
           ]} />
 
           {/* 对象与字段 */}
@@ -102,28 +111,28 @@ export default function ObjectModelPage() {
 
           {/* 关系矩阵 */}
           <div className="mb-3 mt-8 flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <GitBranch className="h-4 w-4 text-brand-500" /> 关系矩阵 Relations
+            <GitBranch className="h-4 w-4 text-brand-500" /> {tr("关系矩阵 Relations", "Relations")}
             <Badge color="brand">{defs.relations.length}</Badge>
           </div>
           <Card className="p-2">
             <DataTable
-              columns={["源对象", "关系", "目标对象", "边字段", "操作"]}
+              columns={[REL_COL.src, REL_COL.rel, REL_COL.dst, REL_COL.edge, REL_COL.ops]}
               rows={defs.relations.map((r) => ({
-                源对象: objLabel(r.src_type),
-                关系: r.rel_type,
-                目标对象: objLabel(r.dst_type),
-                边字段: Object.keys(r.edge_fields ?? {}).join(", ") || "—",
-                操作: r.builtin
-                  ? <span className="inline-flex items-center gap-1 text-xs text-gray-400"><Lock className="h-3 w-3" /> 内置</span>
+                [REL_COL.src]: objLabel(r.src_type),
+                [REL_COL.rel]: r.rel_type,
+                [REL_COL.dst]: objLabel(r.dst_type),
+                [REL_COL.edge]: Object.keys(r.edge_fields ?? {}).join(", ") || "—",
+                [REL_COL.ops]: r.builtin
+                  ? <span className="inline-flex items-center gap-1 text-xs text-gray-400"><Lock className="h-3 w-3" /> {tr("内置", "Built-in")}</span>
                   : <button
                       className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"
                       onClick={async () => {
-                        if (!confirm(`删除关系 ${r.src_type}-${r.rel_type}->${r.dst_type}？`)) return;
+                        if (!confirm(tr(`删除关系 ${r.src_type}-${r.rel_type}->${r.dst_type}？`, `Delete relation ${r.src_type}-${r.rel_type}->${r.dst_type}?`))) return;
                         setBusy(true);
                         try { await deleteRelation(tenant, r.src_type, r.rel_type, r.dst_type); reload(); }
                         catch (e) { setErr(String(e)); } finally { setBusy(false); }
                       }}
-                    ><Trash2 className="h-3 w-3" /> 删除</button>,
+                    ><Trash2 className="h-3 w-3" /> {tr("删除", "Delete")}</button>,
               }))}
             />
           </Card>
@@ -145,7 +154,7 @@ export default function ObjectModelPage() {
       {/* 新增字段 */}
       <FieldModal
         open={!!addFieldFor}
-        title={`为「${objLabel(addFieldFor ?? "")}」新增字段`}
+        title={tr(`为「${objLabel(addFieldFor ?? "")}」新增字段`, `Add Field to "${objLabel(addFieldFor ?? "")}"`)}
         busy={busy}
         onClose={() => setAddFieldFor(null)}
         onSubmit={async (f) => {
@@ -159,7 +168,7 @@ export default function ObjectModelPage() {
       {/* 编辑字段（label/type） */}
       <FieldModal
         open={!!editField}
-        title={`编辑字段 ${editField?.field.code ?? ""}`}
+        title={tr(`编辑字段 ${editField?.field.code ?? ""}`, `Edit Field ${editField?.field.code ?? ""}`)}
         busy={busy}
         initial={editField?.field}
         lockCode
@@ -196,6 +205,13 @@ function ObjectCard({ obj, onAddField, onEditField }: {
   onAddField: () => void;
   onEditField: (f: ObjectFieldDef) => void;
 }) {
+  const { tr } = useLang();
+  const TYPE_LABEL = typeLabels(tr);
+  // 字段表列名（列名须与行键一致才能渲染）
+  const COL = {
+    code: tr("字段", "Field"), name: tr("名称", "Name"), type: tr("类型", "Type"),
+    attr: tr("属性", "Attribute"), ops: tr("操作", "Actions"),
+  };
   return (
     <Card className="p-5">
       <div className="mb-4 flex items-center justify-between">
@@ -207,29 +223,29 @@ function ObjectCard({ obj, onAddField, onEditField }: {
             <div className="flex items-center gap-2 font-semibold text-gray-900">
               {objLabel(obj.object)}
               <span className="text-[11px] uppercase tracking-wide text-gray-400">{obj.object}</span>
-              {obj.builtin && <Badge>内置</Badge>}
+              {obj.builtin && <Badge>{tr("内置", "Built-in")}</Badge>}
             </div>
             <div className="text-xs text-gray-500">
-              主键 {obj.id ?? "—"} · {obj.fields?.length ?? 0} 个字段{obj.table ? ` · 表 ${obj.table}` : ""}
+              {tr("主键", "Primary Key")} {obj.id ?? "—"} · {obj.fields?.length ?? 0} {tr("个字段", "fields")}{obj.table ? ` · ${tr("表", "Table")} ${obj.table}` : ""}
             </div>
           </div>
         </div>
         <Button variant="outline" onClick={onAddField}>
-          <Plus className="h-4 w-4" /> 字段
+          <Plus className="h-4 w-4" /> {tr("字段", "Field")}
         </Button>
       </div>
       <DataTable
-        columns={["字段", "名称", "类型", "属性", "操作"]}
+        columns={[COL.code, COL.name, COL.type, COL.attr, COL.ops]}
         rows={(obj.fields ?? []).map((f) => ({
-          字段: f.code,
-          名称: f.label ?? "—",
-          类型: TYPE_LABEL[f.type] ?? f.type,
-          属性: f.code === obj.id ? <Badge color="brand">主键</Badge> : (f.builtin ? <Badge>内置</Badge> : <Badge color="green">自定义</Badge>),
-          操作: (
+          [COL.code]: f.code,
+          [COL.name]: f.label ?? "—",
+          [COL.type]: TYPE_LABEL[f.type] ?? f.type,
+          [COL.attr]: f.code === obj.id ? <Badge color="brand">{tr("主键", "Primary Key")}</Badge> : (f.builtin ? <Badge>{tr("内置", "Built-in")}</Badge> : <Badge color="green">{tr("自定义", "Custom")}</Badge>),
+          [COL.ops]: (
             <button
               className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
               onClick={() => onEditField(f)}
-            ><Pencil className="h-3 w-3" /> 编辑</button>
+            ><Pencil className="h-3 w-3" /> {tr("编辑", "Edit")}</button>
           ),
         }))}
       />
@@ -243,6 +259,8 @@ function FieldModal({ open, title, onClose, onSubmit, busy, initial, lockCode }:
   onClose: () => void;
   onSubmit: (f: { code: string; type: string; label?: string }) => void;
 }) {
+  const { tr } = useLang();
+  const TYPE_LABEL = typeLabels(tr);
   const [code, setCode] = useState("");
   const [label, setLabel] = useState("");
   const [type, setType] = useState("str");
@@ -253,15 +271,15 @@ function FieldModal({ open, title, onClose, onSubmit, busy, initial, lockCode }:
   return (
     <Modal open={open} title={title} onClose={onClose}>
       <div className="space-y-4">
-        {!lockCode && <TextField label="字段编码 (code)" value={code} onChange={setCode} placeholder="如 region" />}
-        <TextField label="中文名称" value={label} onChange={setLabel} placeholder="如 区域" />
-        <SelectField label="类型" value={type} onChange={setType}
+        {!lockCode && <TextField label={tr("字段编码 (code)", "Field Code (code)")} value={code} onChange={setCode} placeholder={tr("如 region", "e.g. region")} />}
+        <TextField label={tr("中文名称", "Display Name")} value={label} onChange={setLabel} placeholder={tr("如 区域", "e.g. Region")} />
+        <SelectField label={tr("类型", "Type")} value={type} onChange={setType}
           options={FIELD_TYPES.map((t) => ({ value: t, label: `${TYPE_LABEL[t]} (${t})` }))} />
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button variant="ghost" onClick={onClose}>{tr("取消", "Cancel")}</Button>
           <Button disabled={busy || (!lockCode && !code.trim())}
             onClick={() => onSubmit({ code: code.trim(), type, label: label.trim() || undefined })}>
-            {busy ? "提交中…" : "保存"}
+            {busy ? tr("提交中…", "Submitting…") : tr("保存", "Save")}
           </Button>
         </div>
       </div>
@@ -273,22 +291,23 @@ function NewObjectModal({ open, onClose, onSubmit, busy }: {
   open: boolean; busy?: boolean; onClose: () => void;
   onSubmit: (b: { object_key: string; label?: string; id_field: string; id_numeric?: boolean }) => void;
 }) {
+  const { tr } = useLang();
   const [key, setKey] = useState("");
   const [label, setLabel] = useState("");
   const [idField, setIdField] = useState("");
   useEffect(() => { if (open) { setKey(""); setLabel(""); setIdField(""); } }, [open]);
 
   return (
-    <Modal open={open} title="新建对象" onClose={onClose}>
+    <Modal open={open} title={tr("新建对象", "New Object")} onClose={onClose}>
       <div className="space-y-4">
-        <TextField label="对象编码 (object_key)" value={key} onChange={setKey} placeholder="如 campaign" />
-        <TextField label="中文名称" value={label} onChange={setLabel} placeholder="如 活动" />
-        <TextField label="主键字段 (id_field)" value={idField} onChange={setIdField} placeholder="如 campaign_id" />
+        <TextField label={tr("对象编码 (object_key)", "Object Code (object_key)")} value={key} onChange={setKey} placeholder={tr("如 campaign", "e.g. campaign")} />
+        <TextField label={tr("中文名称", "Display Name")} value={label} onChange={setLabel} placeholder={tr("如 活动", "e.g. Campaign")} />
+        <TextField label={tr("主键字段 (id_field)", "Primary Key Field (id_field)")} value={idField} onChange={setIdField} placeholder={tr("如 campaign_id", "e.g. campaign_id")} />
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button variant="ghost" onClick={onClose}>{tr("取消", "Cancel")}</Button>
           <Button disabled={busy || !key.trim() || !idField.trim()}
             onClick={() => onSubmit({ object_key: key.trim(), label: label.trim() || undefined, id_field: idField.trim() })}>
-            {busy ? "创建中…" : "创建"}
+            {busy ? tr("创建中…", "Creating…") : tr("创建", "Create")}
           </Button>
         </div>
       </div>
@@ -301,6 +320,7 @@ function NewRelationModal({ open, objectKeys, onClose, onSubmit, busy }: {
   onClose: () => void;
   onSubmit: (b: { src_type: string; rel_type: string; dst_type: string }) => void;
 }) {
+  const { tr } = useLang();
   const [src, setSrc] = useState("");
   const [rel, setRel] = useState("");
   const [dst, setDst] = useState("");
@@ -310,16 +330,16 @@ function NewRelationModal({ open, objectKeys, onClose, onSubmit, busy }: {
 
   const opts = objectKeys.map((k) => ({ value: k, label: `${objLabel(k)} (${k})` }));
   return (
-    <Modal open={open} title="新建关系" onClose={onClose}>
+    <Modal open={open} title={tr("新建关系", "New Relation")} onClose={onClose}>
       <div className="space-y-4">
-        <SelectField label="源对象" value={src} onChange={setSrc} options={opts} />
-        <TextField label="关系类型 (rel_type)" value={rel} onChange={setRel} placeholder="如 owns / visited" />
-        <SelectField label="目标对象" value={dst} onChange={setDst} options={opts} />
+        <SelectField label={tr("源对象", "Source")} value={src} onChange={setSrc} options={opts} />
+        <TextField label={tr("关系类型 (rel_type)", "Relation Type (rel_type)")} value={rel} onChange={setRel} placeholder={tr("如 owns / visited", "e.g. owns / visited")} />
+        <SelectField label={tr("目标对象", "Target")} value={dst} onChange={setDst} options={opts} />
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button variant="ghost" onClick={onClose}>{tr("取消", "Cancel")}</Button>
           <Button disabled={busy || !src || !rel.trim() || !dst}
             onClick={() => onSubmit({ src_type: src, rel_type: rel.trim(), dst_type: dst })}>
-            {busy ? "创建中…" : "创建"}
+            {busy ? tr("创建中…", "Creating…") : tr("创建", "Create")}
           </Button>
         </div>
       </div>

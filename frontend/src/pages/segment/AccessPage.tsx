@@ -4,6 +4,7 @@ import Layout from "../../components/layout/Layout";
 import { Button, Card, DataTable, Modal, Spinner, TextField } from "../../components/ui";
 import { StatCards, StatusPill, SubTabs } from "../../components/segment/kit";
 import { useTenant } from "../../context/TenantContext";
+import { useLang } from "../../context/LangContext";
 import {
   cancelInvitation,
   createInvitation,

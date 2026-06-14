@@ -4,6 +4,7 @@ import Layout from "../components/layout/Layout";
 import { Card, DataTable, Button, Spinner, Badge, Modal, TextField } from "../components/ui";
 import { StatCards } from "../components/segment/kit";
 import { useTenant } from "../context/TenantContext";
+import { useLang } from "../context/LangContext";
 import {
   listConsentCategories,
   createConsentCategory,
@@ -14,6 +15,7 @@ import {
 
 export default function PrivacyConsentPage() {
   const { tenant } = useTenant();
+  const { tr } = useLang();
   const [cats, setCats] = useState<ConsentCategory[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -67,33 +69,47 @@ export default function PrivacyConsentPage() {
     finally { setLooking(false); }
   };
 
+  const CAT_COL = {
+    category: tr("分类", "Category"),
+    desc: tr("说明", "Description"),
+    required: tr("是否必选", "Required"),
+    rate: tr("同意率", "Opt-in Rate"),
+    vendors: tr("厂商", "Vendors"),
+  };
+  const REC_COL = {
+    category: tr("分类", "Category"),
+    status: tr("授权状态", "Consent Status"),
+    grantedAt: tr("授权时间", "Granted At"),
+    withdrawnAt: tr("撤回时间", "Withdrawn At"),
+  };
+
   return (
     <Layout
-      title="同意管理 Consent"
-      subtitle="管理同意分类与厂商映射，按主体（one_id）查询授权状态（来自 /privacy/consent）"
-      actions={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> 新建分类</Button>}
+      title={tr("同意管理 Consent", "Consent Management")}
+      subtitle={tr("管理同意分类与厂商映射，按主体（one_id）查询授权状态（来自 /privacy/consent）", "Manage consent categories and vendor mappings, and look up authorization status by subject (one_id) — from /privacy/consent")}
+      actions={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {tr("新建分类", "New Category")}</Button>}
     >
       {err && <Card className="mb-4 p-4 text-sm text-red-600">{err}</Card>}
 
       <StatCards items={[
-        { label: "同意分类数", value: cats ? cats.length : "…" },
-        { label: "必选类", value: cats ? cats.filter((c) => c.is_required).length : "…" },
-        { label: "厂商总数", value: cats ? cats.reduce((a, c) => a + (c.vendors?.length || 0), 0) : "…" },
-        { label: "可选类", value: cats ? cats.filter((c) => !c.is_required).length : "…" },
+        { label: tr("同意分类数", "Consent Categories"), value: cats ? cats.length : "…" },
+        { label: tr("必选类", "Required"), value: cats ? cats.filter((c) => c.is_required).length : "…" },
+        { label: tr("厂商总数", "Total Vendors"), value: cats ? cats.reduce((a, c) => a + (c.vendors?.length || 0), 0) : "…" },
+        { label: tr("可选类", "Optional"), value: cats ? cats.filter((c) => !c.is_required).length : "…" },
       ]} />
 
-      {!cats && !err && <div className="flex items-center gap-2 text-gray-500"><Spinner /> 加载中…</div>}
+      {!cats && !err && <div className="flex items-center gap-2 text-gray-500"><Spinner /> {tr("加载中", "Loading")}…</div>}
       {cats && (
         <Card className="mb-6 p-2">
-          <div className="px-3 py-2 text-sm font-medium text-gray-700">同意分类</div>
+          <div className="px-3 py-2 text-sm font-medium text-gray-700">{tr("同意分类", "Consent Categories")}</div>
           <DataTable
-            columns={["分类", "说明", "是否必选", "同意率", "厂商"]}
+            columns={[CAT_COL.category, CAT_COL.desc, CAT_COL.required, CAT_COL.rate, CAT_COL.vendors]}
             rows={cats.map((c) => ({
-              "分类": c.category_name,
-              "说明": c.description || "—",
-              "是否必选": c.is_required ? <Badge color="brand">必选</Badge> : <Badge>可选</Badge>,
-              "同意率": `${c.optedIn_pct}%`,
-              "厂商": (c.vendors && c.vendors.length) ? c.vendors.join(", ") : "—",
+              [CAT_COL.category]: c.category_name,
+              [CAT_COL.desc]: c.description || "—",
+              [CAT_COL.required]: c.is_required ? <Badge color="brand">{tr("必选", "Required")}</Badge> : <Badge>{tr("可选", "Optional")}</Badge>,
+              [CAT_COL.rate]: `${c.optedIn_pct}%`,
+              [CAT_COL.vendors]: (c.vendors && c.vendors.length) ? c.vendors.join(", ") : "—",
             }))}
           />
         </Card>
@@ -102,29 +118,29 @@ export default function PrivacyConsentPage() {
       {/* 主体同意查询 */}
       <Card className="p-5">
         <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-700">
-          <BadgeCheck className="h-4 w-4 text-brand-500" /> 主体同意查询
+          <BadgeCheck className="h-4 w-4 text-brand-500" /> {tr("主体同意查询", "Subject Consent Lookup")}
         </div>
         <div className="flex items-end gap-3">
           <div className="w-56">
-            <TextField label="OneID" value={oneId} onChange={setOneId} placeholder="输入 one_id" />
+            <TextField label="OneID" value={oneId} onChange={setOneId} placeholder={tr("输入 one_id", "Enter one_id")} />
           </div>
           <Button variant="outline" onClick={lookup} disabled={looking || !oneId}>
-            {looking ? <Spinner /> : <Search className="h-4 w-4" />} 查询
+            {looking ? <Spinner /> : <Search className="h-4 w-4" />} {tr("查询", "Search")}
           </Button>
         </div>
         {lookupErr && <div className="mt-3 text-sm text-red-600">{lookupErr}</div>}
         {records && (
           <div className="mt-4">
             {records.length === 0 ? (
-              <div className="text-sm text-gray-400">该主体暂无同意记录</div>
+              <div className="text-sm text-gray-400">{tr("该主体暂无同意记录", "No consent records for this subject")}</div>
             ) : (
               <DataTable
-                columns={["分类", "授权状态", "授权时间", "撤回时间"]}
+                columns={[REC_COL.category, REC_COL.status, REC_COL.grantedAt, REC_COL.withdrawnAt]}
                 rows={records.map((r) => ({
-                  "分类": r.category_name || `#${r.category_id}`,
-                  "授权状态": r.granted ? <Badge color="green">已授权</Badge> : <Badge color="red">未授权</Badge>,
-                  "授权时间": r.granted_at || "—",
-                  "撤回时间": r.withdrawn_at || "—",
+                  [REC_COL.category]: r.category_name || `#${r.category_id}`,
+                  [REC_COL.status]: r.granted ? <Badge color="green">{tr("已授权", "Granted")}</Badge> : <Badge color="red">{tr("未授权", "Not Granted")}</Badge>,
+                  [REC_COL.grantedAt]: r.granted_at || "—",
+                  [REC_COL.withdrawnAt]: r.withdrawn_at || "—",
                 }))}
               />
             )}
@@ -132,19 +148,19 @@ export default function PrivacyConsentPage() {
         )}
       </Card>
 
-      <Modal open={open} title="新建同意分类" onClose={() => setOpen(false)}>
+      <Modal open={open} title={tr("新建同意分类", "New Consent Category")} onClose={() => setOpen(false)}>
         <div className="space-y-4">
-          <TextField label="分类名称" value={name} onChange={setName} placeholder="如 营销邮件 / 个性化推荐" />
-          <TextField label="说明" value={desc} onChange={setDesc} placeholder="可选" />
-          <TextField label="厂商（逗号分隔）" value={vendors} onChange={setVendors} placeholder="如 微信, 巨量引擎" />
+          <TextField label={tr("分类名称", "Category Name")} value={name} onChange={setName} placeholder={tr("如 营销邮件 / 个性化推荐", "e.g. Marketing Email / Personalized Recommendations")} />
+          <TextField label={tr("说明", "Description")} value={desc} onChange={setDesc} placeholder={tr("可选", "Optional")} />
+          <TextField label={tr("厂商（逗号分隔）", "Vendors (comma-separated)")} value={vendors} onChange={setVendors} placeholder={tr("如 微信, 巨量引擎", "e.g. WeChat, Ocean Engine")} />
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />
-            必选分类（用户不可拒绝）
+            {tr("必选分类（用户不可拒绝）", "Required category (users cannot opt out)")}
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={() => setOpen(false)}>取消</Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>{tr("取消", "Cancel")}</Button>
             <Button onClick={save} disabled={saving || !name.trim()}>
-              {saving ? <Spinner /> : "保存"}
+              {saving ? <Spinner /> : tr("保存", "Save")}
             </Button>
           </div>
         </div>

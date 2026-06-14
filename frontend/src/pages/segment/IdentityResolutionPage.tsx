@@ -4,6 +4,7 @@ import Layout from "../../components/layout/Layout";
 import { Card, Button, DataTable, Modal, TextField, Spinner } from "../../components/ui";
 import { StatCards } from "../../components/segment/kit";
 import { useTenant } from "../../context/TenantContext";
+import { useLang } from "../../context/LangContext";
 import {
   listIdentityRules, upsertIdentityRule, deleteIdentityRule,
   type IdentityRule, type IdentityRuleInput,
@@ -17,6 +18,7 @@ const EMPTY: IdentityRuleInput = {
 
 export default function IdentityResolutionPage() {
   const { tenant } = useTenant();
+  const { tr } = useLang();
   const [rows, setRows] = useState<IdentityRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export default function IdentityResolutionPage() {
     try {
       setRows(await listIdentityRules(tenant));
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e.message || "加载失败");
+      setError(e?.response?.data?.detail || e.message || tr("加载失败", "Failed to load"));
     } finally {
       setLoading(false);
     }
@@ -38,38 +40,50 @@ export default function IdentityResolutionPage() {
   useEffect(() => { load(); }, [load]);
 
   async function save() {
-    if (!form.identifier_type.trim()) { setError("请填写标识符类型"); return; }
+    if (!form.identifier_type.trim()) { setError(tr("请填写标识符类型", "Please enter an identifier type")); return; }
     setSaving(true); setError(null);
     try {
       await upsertIdentityRule(tenant, form);
       setOpen(false); setForm(EMPTY);
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e.message || "保存失败");
+      setError(e?.response?.data?.detail || e.message || tr("保存失败", "Failed to save"));
     } finally {
       setSaving(false);
     }
   }
 
   async function remove(ruleId: string) {
-    if (!confirm(`删除规则 ${ruleId}？`)) return;
+    if (!confirm(tr(`删除规则 ${ruleId}？`, `Delete rule ${ruleId}?`))) return;
     try {
       await deleteIdentityRule(tenant, ruleId);
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e.message || "删除失败");
+      setError(e?.response?.data?.detail || e.message || tr("删除失败", "Failed to delete"));
     }
   }
 
   const uniqueCount = rows.filter((r) => !!r.is_unique).length;
   const primaryCount = rows.filter((r) => !!r.is_primary).length;
 
+  const COL = {
+    id: tr("标识符", "Identifier"),
+    priority: tr("优先级", "Priority"),
+    limit: tr("上限", "Limit"),
+    unique: tr("唯一性", "Uniqueness"),
+    primary: tr("主标识", "Primary"),
+    merge: tr("merge 策略", "Merge strategy"),
+    enabled: tr("启用", "Enabled"),
+    desc: tr("说明", "Description"),
+    actions: "",
+  };
+
   return (
     <Layout
-      title="身份识别 Identity Resolution"
-      subtitle="将各渠道标识符实时识别并 merge 到统一 one_id"
+      title={tr("身份识别 Identity Resolution", "Identity Resolution")}
+      subtitle={tr("将各渠道标识符实时识别并 merge 到统一 one_id", "Resolve identifiers from every channel in real time and merge them into a unified one_id")}
       actions={<Button onClick={() => { setForm(EMPTY); setError(null); setOpen(true); }}>
-        <Plus className="h-4 w-4" /> 新建规则
+        <Plus className="h-4 w-4" /> {tr("新建规则", "New rule")}
       </Button>}
     >
       {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{error}</div>}
