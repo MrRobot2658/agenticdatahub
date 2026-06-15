@@ -92,6 +92,11 @@ export async function saveDashboard(tenant: number, body: { title: string; sourc
   return data;
 }
 
+export async function updateDashboard(tenant: number, id: string, body: { title?: string; sources?: string[] }): Promise<Dashboard> {
+  const { data } = await http.put(`/analyst/dashboards/${id}`, body, { params: { tenant_id: tenant } });
+  return data;
+}
+
 export async function deleteDashboard(tenant: number, id: string): Promise<void> {
   await http.delete(`/analyst/dashboards/${id}`, { params: { tenant_id: tenant } });
 }

@@ -209,6 +209,25 @@ class AnalystService:
                         (did, tenant_id, title.strip()[:120] or "自定义看板", json.dumps(uniq)))
         return {"id": did, "title": title, "sources": uniq}
 
+    def update_dashboard(self, tenant_id: int, did: str, title: str | None, sources: list[str] | None) -> dict:
+        sets, params = [], []
+        if title is not None:
+            sets.append("title=%s"); params.append(title.strip()[:120] or "自定义看板")
+        if sources is not None:
+            clean, seen = [], set()
+            for s in sources:
+                if s in SOURCES and s not in seen:
+                    seen.add(s); clean.append(s)
+            if not clean:
+                raise HTTPException(status_code=400, detail="至少需要一个有效数据源")
+            sets.append("sources=%s"); params.append(json.dumps(clean[:8]))
+        if not sets:
+            return self.get_dashboard(tenant_id, did)
+        params += [tenant_id, did]
+        with self._conn() as conn, conn.cursor() as cur:
+            cur.execute(f"UPDATE analyst_dashboards SET {', '.join(sets)} WHERE tenant_id=%s AND id=%s", tuple(params))
+        return self.get_dashboard(tenant_id, did)
+
     def delete_dashboard(self, tenant_id: int, did: str) -> None:
         with self._conn() as conn, conn.cursor() as cur:
             cur.execute("DELETE FROM analyst_dashboards WHERE tenant_id=%s AND id=%s", (tenant_id, did))
@@ -372,6 +391,12 @@ def get_dashboard(did: str, tenant_id: int = Query(...)):
 @router.post("/dashboards")
 def save_dashboard(tenant_id: int = Query(...), title: str = Body(...), sources: list[str] = Body(...)):
     return service.save_dashboard(tenant_id, title, sources)
+
+
+@router.put("/dashboards/{did}")
+def update_dashboard(did: str, tenant_id: int = Query(...),
+                     title: str | None = Body(default=None), sources: list[str] | None = Body(default=None)):
+    return service.update_dashboard(tenant_id, did, title, sources)
 
 
 @router.delete("/dashboards/{did}")
