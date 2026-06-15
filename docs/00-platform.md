@@ -233,10 +233,15 @@
 - **打开页面**：所有智能体都带 `open_page(path)` 工具；启动时从挂载的 `docs/page-routes.md`（compose `./docs/page-routes.md:/app/page-routes.md:ro`）**解析全部功能页面路由**注入系统提示，用户说「打开/前往/带我去 X 页面」时调用 `open_page`，前端 `AssistantWidget` 收到 `navigate` 后跳转并收起面板。导航 vs 新建由路由+提示区分（「打开某看板」走导航，「做一个看板」走 create）。
 - 响应含 `agent` / `agent_name`（前端显示「智能体 · X」标识）、`steps`（工具调用轨迹）、`task`、`created`（新建图表/看板 + 跳转路径）、`navigate`（要打开的页面）。
 - **聊天记录持久化（按用户）**：`/chat` 带 `user_id`（登录用户）即把每轮「用户消息 + 助手回复」落 `assistant_messages` 表（assistant 服务直连 MySQL）；面板首次打开按 `user_id` 加载历史，头部「清空记录」可删除。用户间隔离。
-- 端点：`POST /chat`（含 user_id）、`GET /history` / `DELETE /history`（按用户）、`GET /health`（含 agents 列表）、`GET /agents`、`GET /mcp/tools`（设置 → MCP 设置页展示）、`GET /tasks`。表：`sql/migrate_assistant.sql`。
+- **主动式埋点 Copilot（让助手「活」起来）**：前端埋点采集左侧页面行为，近实时推给助手，助手判断后**主动**给建议（不只被动等问）。详见 [方案-主动式埋点copilot.md](./方案-主动式埋点copilot.md)。
+  - **采集**：`lib/tracker.ts` 单例缓冲浏览器行为（`page_view`/`click[data-track]`/`empty_state`/`error`/`idle`/`repeat`），命中触发点（切页 / idle 超时 / 攒够 N 条 / 强信号）批量上报；`components/assistant/useBehaviorTracker.ts` 挂在 `AssistantShell` 接路由/活动/点击，`api/client.ts` 响应拦截把 API 4xx/5xx 记为 `error`。仅采集元信息，不采集敏感字段。
+  - **判断**：`POST /observe` 落库 → **启发式门控**（`_detect_signal`：error / 空结果 / 反复横跳 / **任意页面 idle 长停留** / 进高价值页）→ 命中才调 **copilot agent**（DeepSeek 结构化输出 `{should_suggest,title,message,action}`）→ 会话级冷却 `PROACTIVE_COOLDOWN_SEC`（默认 45s）。两层门控（前端触发 + 后端启发式）确保 LLM 调用稀疏。copilot 默认不开 MCP，只产出「建议 + 可选 action」，**不自动写**。
+  - **呈现**：收到建议**自动展开右侧侧边栏**插入主动气泡，含 action 按钮（`open_page` 跳转 / `prefill` 预填聊天框待确认 / 忽略）；侧边栏头部铃铛为**免打扰**开关（`localStorage`）。
+  - 开关：`PROACTIVE_ENABLED`（默认开）、`PROACTIVE_COOLDOWN_SEC`；无 `DEEPSEEK_API_KEY` 走固定文案降级。表：`sql/migrate_behavior.sql`（`user_behavior_events` + `proactive_suggestions`）。
+- 端点：`POST /chat`（含 user_id）、`POST /observe`（行为上报，返回主动建议）、`GET /history` / `DELETE /history`（按用户）、`GET /health`（含 agents 列表）、`GET /agents`、`GET /mcp/tools`（设置 → MCP 设置页展示）、`GET /tasks`。表：`sql/migrate_assistant.sql`、`sql/migrate_behavior.sql`。
 - 降级：无 `DEEPSEEK_API_KEY` 或出错时返回友好提示，绝不 500。
 
-> 真实 vs Mock：**全真实**（对话、MCP 查询、建图表看板、发任务均落地）。
+> 真实 vs Mock：**全真实**（对话、MCP 查询、建图表看板、发任务、行为采集 + 主动建议均落地）。
 
 ---
 
