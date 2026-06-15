@@ -12,3 +12,6 @@ services/mcp/logs/
 
 # Claude Code 本地设置(机器相关，不入库)
 .claude/settings.local.json
+
+# 高保真 PPT 截图（由 scripts/shoot_ppt.mjs 重新生成）
+ppt/images/
