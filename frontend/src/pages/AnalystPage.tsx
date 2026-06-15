@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Sparkles } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import {
   ResponsiveContainer,
   BarChart, Bar,
@@ -11,6 +11,7 @@ import {
 import Layout from "../components/layout/Layout";
 import { Card, Button, Spinner, Modal, TextField } from "../components/ui";
 import { StatCards } from "../components/segment/kit";
+import AnalystChart from "../components/analyst/AnalystChart";
 import { useTenant } from "../context/TenantContext";
 import { useLang } from "../context/LangContext";
 import {
@@ -178,19 +179,15 @@ export default function AnalystPage() {
       {charts && charts.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
           {charts.map((c) => (
-            <Card key={c.id} className="p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="font-semibold text-gray-900">{c.title}</span>
-                <button
-                  onClick={() => onDelete(c)}
-                  className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                  title={tr("删除", "Delete")}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-              <ChartView type={c.type} data={c.data} />
-            </Card>
+            <AnalystChart
+              key={c.id}
+              tenant={tenant}
+              title={c.title}
+              type={c.type}
+              source={c.source}
+              data={c.data}
+              onDelete={() => onDelete(c)}
+            />
           ))}
         </div>
       )}

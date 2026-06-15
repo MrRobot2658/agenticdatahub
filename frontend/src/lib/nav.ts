@@ -71,6 +71,12 @@ export const SECTIONS: NavSection[] = [
   },
   {
     label: "分析", term: "Analyst", to: "/analyst", icon: LineChart,
+    children: [
+      { label: "图表看板", term: "Charts", to: "/analyst", icon: LineChart },
+      { label: "用户画像看板", term: "User Profile", to: "/analyst/dashboards/user", icon: UserSearch },
+      { label: "客户画像看板", term: "Account Profile", to: "/analyst/dashboards/account", icon: Building2 },
+      { label: "转化率ROI看板", term: "Conversion & ROI", to: "/analyst/dashboards/roi", icon: Gauge },
+    ],
   },
   {
     label: "触达", term: "Engage", to: "/engage", icon: Megaphone,

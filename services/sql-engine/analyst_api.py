@@ -71,6 +71,57 @@ class AnalystService:
             )
             return [{"label": str(r["label"]), "value": int(r["value"])} for r in cur.fetchall()]
 
+    # ── 下钻：某数据点背后的明细记录 ─────────────────────────────────────────
+    def drilldown(self, tenant_id: int, source: str, label: str) -> dict:
+        meta = SOURCES.get(source)
+        if not meta:
+            raise HTTPException(status_code=400, detail=f"未知数据源：{source}")
+        with self._conn() as conn, conn.cursor() as cur:
+            if meta["kind"] == "objects":
+                rev = {v: k for k, v in _OBJECT_LABEL.items()}
+                table = dict(_OBJECT_TABLES).get(rev.get(label, ""))
+                if not table:
+                    return {"columns": [], "rows": [], "count": 0}
+                cur.execute(f"SELECT * FROM {table} WHERE tenant_id=%s LIMIT 200", (tenant_id,))
+            else:
+                t, c = meta["table"], meta["col"]
+                if label in ("未知", "None", ""):
+                    cur.execute(f"SELECT * FROM {t} WHERE tenant_id=%s AND ({c} IS NULL OR {c}='') LIMIT 200", (tenant_id,))
+                else:
+                    cur.execute(f"SELECT * FROM {t} WHERE tenant_id=%s AND {c}=%s LIMIT 200", (tenant_id, label))
+            rows = cur.fetchall()
+        # 隐藏冗长/内部列，JSON 列转字符串
+        hide = {"tenant_id", "properties", "update_time"}
+        cols = [k for k in (rows[0].keys() if rows else []) if k not in hide]
+        out = []
+        for r in rows:
+            out.append({k: (str(r[k]) if r[k] is not None else "") for k in cols})
+        return {"columns": cols, "rows": out, "count": len(out), "label": label}
+
+    # ── KPI（看板用）─────────────────────────────────────────────────────────
+    def kpis(self, tenant_id: int) -> dict:
+        def one(sql: str) -> float:
+            with self._conn() as conn, conn.cursor() as cur:
+                cur.execute(sql, (tenant_id,))
+                v = cur.fetchone()
+                return float(list(v.values())[0] or 0) if v else 0.0
+        users = int(one("SELECT COUNT(*) FROM doris_user_wide WHERE tenant_id=%s"))
+        accounts = int(one("SELECT COUNT(*) FROM object_account WHERE tenant_id=%s"))
+        leads = int(one("SELECT COUNT(*) FROM object_lead WHERE tenant_id=%s"))
+        leads_q = int(one("SELECT COUNT(*) FROM object_lead WHERE tenant_id=%s AND stage='qualified'"))
+        products = int(one("SELECT COUNT(*) FROM object_product WHERE tenant_id=%s"))
+        stores = int(one("SELECT COUNT(*) FROM object_store WHERE tenant_id=%s"))
+        orders = int(one("SELECT COUNT(*) FROM object_order WHERE tenant_id=%s"))
+        orders_paid = int(one("SELECT COUNT(*) FROM object_order WHERE tenant_id=%s AND status='paid'"))
+        gmv = one("SELECT COALESCE(SUM(amount),0) FROM object_order WHERE tenant_id=%s AND status='paid'")
+        return {
+            "users": users, "accounts": accounts, "leads": leads, "leads_qualified": leads_q,
+            "products": products, "stores": stores, "orders": orders, "orders_paid": orders_paid,
+            "gmv": round(gmv, 2), "aov": round(gmv / orders_paid, 2) if orders_paid else 0.0,
+            "lead_qualified_rate": round(leads_q / leads, 4) if leads else 0.0,
+            "order_paid_rate": round(orders_paid / orders, 4) if orders else 0.0,
+        }
+
     # ── 图表 CRUD ────────────────────────────────────────────────────────────
     def list_charts(self, tenant_id: int) -> list[dict]:
         with self._conn() as conn, conn.cursor() as cur:
@@ -166,6 +217,16 @@ def list_sources():
 @router.get("/data")
 def get_data(tenant_id: int = Query(...), source: str = Query(...)):
     return {"source": source, "data": service.data(tenant_id, source)}
+
+
+@router.get("/drilldown")
+def drilldown(tenant_id: int = Query(...), source: str = Query(...), label: str = Query(...)):
+    return service.drilldown(tenant_id, source, label)
+
+
+@router.get("/kpis")
+def kpis(tenant_id: int = Query(...)):
+    return service.kpis(tenant_id)
 
 
 @router.get("/charts")
