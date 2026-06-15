@@ -30,6 +30,11 @@ export interface ChatCreated {
   path: string;
 }
 
+export interface ChatNavigate {
+  path: string;
+  name: string;
+}
+
 export interface ChatResponse {
   reply: string;
   steps: ChatStep[];
@@ -37,6 +42,7 @@ export interface ChatResponse {
   agent?: string;
   agent_name?: string;
   created?: ChatCreated | null;
+  navigate?: ChatNavigate | null;
 }
 
 export interface AssistantTask {

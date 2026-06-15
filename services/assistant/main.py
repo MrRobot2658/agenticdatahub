@@ -45,7 +45,7 @@ AGENT_DEFS: dict[str, dict] = {
     "data":    {"name": "数据查询", "desc": "查询底座数据：用户/线索/客户/订单/受众/标签/画像等"},
     "analyst": {"name": "分析",     "desc": "创建图表或看板、出指标分布（电商/线索/客户等）"},
     "task":    {"name": "任务",     "desc": "发布/运行后台任务，如同步受众、导出、跑批"},
-    "general": {"name": "通用",     "desc": "产品介绍、使用答疑、其它对话"},
+    "general": {"name": "通用",     "desc": "产品介绍、使用答疑、打开/前往/跳转到某功能页面（导航）、其它对话"},
 }
 
 AGENT_SYSTEM: dict[str, str] = {
@@ -57,6 +57,7 @@ AGENT_SYSTEM: dict[str, str] = {
     "analyst": (
         "你是 AgenticDataHub 的「分析」智能体。用户想要图表/看板/指标时：单个图表用 `create_chart`，"
         "一个含多图的看板用 `create_dashboard`，把用户需求原样作为 question 传给工具。当前 tenant_id 是 {tenant_id}。"
+        "注意：若用户是「打开/前往某个已有看板页面」（导航），应调用 `open_page` 跳转，**不要新建**；只有要新看板时才 create_dashboard。"
         "建好后简要说明名称，并提示去「分析」查看。回答简洁。"
     ),
     "task": (
@@ -68,6 +69,39 @@ AGENT_SYSTEM: dict[str, str] = {
         "知识库/应用/分析等。做产品介绍与答疑；当用户想查数据/建图表看板/发任务时，引导其说清需求。回答简洁，用用户的语言。"
     ),
 }
+
+# ── 功能页面路由表（默认加载，供「打开页面」导航）─────────────────────────────
+import re
+
+PAGE_ROUTES_FILE = os.getenv("PAGE_ROUTES_FILE", "/app/page-routes.md")
+
+
+def _load_pages() -> list[tuple[str, str]]:
+    out: list[tuple[str, str]] = []
+    try:
+        with open(PAGE_ROUTES_FILE, encoding="utf-8") as f:
+            for line in f:
+                m = re.match(r"^- `(/[^`]*)` — (.+)$", line.strip())
+                if m:
+                    out.append((m.group(1), m.group(2).strip()))
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
+PAGE_CATALOG = _load_pages()
+PAGE_INDEX = {p: label for p, label in PAGE_CATALOG}
+NAV_SUFFIX = (
+    "\n\n【页面导航】当用户想「打开/前往/跳转到」某功能页面时，调用 `open_page(path)`；"
+    "path 必须取自下表，勿编造：\n" + "\n".join(f"- {p} — {label}" for p, label in PAGE_CATALOG)
+) if PAGE_CATALOG else ""
+
+OPEN_PAGE_TOOL = {"type": "function", "function": {
+    "name": "open_page",
+    "description": "在控制台打开/跳转到一个功能页面。path 必须是已知页面路由之一（见系统提示的页面表）。",
+    "parameters": {"type": "object", "properties": {
+        "path": {"type": "string", "description": "页面路由，如 /analyst 或 /knowledge"},
+    }, "required": ["path"]}}}
 
 app = FastAPI(title="AgenticDataHub 智能助手（多智能体）")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
@@ -146,11 +180,34 @@ CREATE_DASHBOARD_TOOL = {"type": "function", "function": {
 
 
 def _agent_tools(agent: str) -> list[dict]:
+    """非 data 智能体的工具集（均含 open_page 导航）。"""
+    tools: list[dict] = []
     if agent == "analyst":
-        return [CREATE_CHART_TOOL, CREATE_DASHBOARD_TOOL]
-    if agent == "task":
-        return [PUBLISH_TASK_TOOL]
-    return []
+        tools += [CREATE_CHART_TOOL, CREATE_DASHBOARD_TOOL]
+    elif agent == "task":
+        tools += [PUBLISH_TASK_TOOL]
+    tools.append(OPEN_PAGE_TOOL)
+    return tools
+
+
+def _local_exec(name: str, args: dict, tid: int):
+    """本地工具执行：命中返回 (result, meta)；非本地工具返回 (None, None)。
+    meta 可带 task / created / navigate，供 /chat 汇总。"""
+    if name == "publish_task":
+        r = publish_task_handler(tid, args.get("task_name", "未命名任务"), args.get("source_object", "user"))
+        return r, {"task": r}
+    if name == "create_chart":
+        r = create_chart_handler(tid, args.get("question", ""))
+        return r, {"created": {"kind": "chart", "id": r["chart_id"], "title": r["title"], "path": "/analyst"}}
+    if name == "create_dashboard":
+        r = create_dashboard_handler(tid, args.get("question", ""))
+        return r, {"created": {"kind": "dashboard", "id": r["dashboard_id"], "title": r["title"], "path": r["path"]}}
+    if name == "open_page":
+        path = (args.get("path") or "").strip()
+        if path in PAGE_INDEX:
+            return ({"opened": path, "name": PAGE_INDEX[path]}, {"navigate": {"path": path, "name": PAGE_INDEX[path]}})
+        return {"error": f"未知页面：{path}（请从页面表里选）"}, {}
+    return None, None
 
 
 def _complete_run_later(run_id: str, tenant_id: int, entry: dict) -> None:
@@ -225,6 +282,10 @@ def _summarize(result: Any, limit: int = 300) -> str:
 
 def _route_keyword(text: str) -> str:
     t = text or ""
+    # 导航意图优先（general 持有 open_page）：打开/前往某页面，而非新建
+    if any(w in t for w in ("打开", "前往", "跳转", "带我", "进入", "导航", "切到", "切换到", "去到")) \
+            and not any(w in t for w in ("做一个", "做个", "创建", "新建", "生成", "建一个", "建个")):
+        return "general"
     if any(w in t for w in ("看板", "图表", "饼图", "柱状", "趋势", "占比", "分布图", "可视化", "dashboard", "chart")):
         return "analyst"
     if any(w in t for w in ("发布任务", "跑批", "同步", "导出", "运行任务", "后台任务", "调度")):
@@ -283,11 +344,12 @@ async def mcp_tools() -> dict:
     return {"server": server, "tools": tools}
 
 
-async def _agent_loop(messages: list[dict], tools: list[dict], execute) -> tuple[str, list, dict | None, dict | None]:
-    """通用 tool-call 循环。execute(name, args) -> (result, meta{task?,created?})。"""
+async def _agent_loop(messages: list[dict], tools: list[dict], execute) -> tuple[str, list, dict | None, dict | None, dict | None]:
+    """通用 tool-call 循环。execute(name, args) -> (result, meta{task?,created?,navigate?})。"""
     steps: list[dict] = []
     task: dict | None = None
     created: dict | None = None
+    navigate: dict | None = None
     reply = ""
     for _ in range(MAX_TOOL_ITERS):
         message = await _deepseek_chat(messages, tools or None)
@@ -310,6 +372,8 @@ async def _agent_loop(messages: list[dict], tools: list[dict], execute) -> tuple
                     task = meta["task"]
                 if meta.get("created"):
                     created = meta["created"]
+                if meta.get("navigate"):
+                    navigate = meta["navigate"]
             except Exception as e:  # noqa: BLE001
                 ok = False
                 result, meta = {"error": str(e)}, {}
@@ -318,18 +382,19 @@ async def _agent_loop(messages: list[dict], tools: list[dict], execute) -> tuple
             steps.append({"tool": name, "args": args, "ok": ok, "summary": _summarize(result)})
     else:
         reply = reply or "（已达到工具调用上限，部分结果见 steps）"
-    return reply, steps, task, created
+    return reply, steps, task, created, navigate
 
 
 @app.post("/chat")
 async def chat(req: ChatRequest) -> dict:
     if not DEEPSEEK_API_KEY:
         return {"reply": "（未配置 DeepSeek API Key，智能助手暂不可用）", "agent": "general",
-                "agent_name": AGENT_DEFS["general"]["name"], "steps": [], "task": None, "created": None}
+                "agent_name": AGENT_DEFS["general"]["name"], "steps": [], "task": None,
+                "created": None, "navigate": None}
 
     agent = await _route(req.messages)
     tid = req.tenant_id
-    sysmsg = {"role": "system", "content": AGENT_SYSTEM[agent].format(tenant_id=tid)}
+    sysmsg = {"role": "system", "content": AGENT_SYSTEM[agent].format(tenant_id=tid) + NAV_SUFFIX}
     messages: list[dict] = [sysmsg] + [{"role": m.role, "content": m.content} for m in req.messages]
     base = {"agent": agent, "agent_name": AGENT_DEFS[agent]["name"]}
 
@@ -342,34 +407,29 @@ async def chat(req: ChatRequest) -> dict:
                     global _TOOL_SCHEMA_CACHE
                     _TOOL_SCHEMA_CACHE = [_mcp_tool_to_function(t) for t in mcp_list]
                     names = {t.name for t in mcp_list}
+                    tools = _TOOL_SCHEMA_CACHE + [OPEN_PAGE_TOOL]  # data 也可导航
 
                     async def execute(name, args):
+                        res, meta = _local_exec(name, args, tid)
+                        if res is not None:
+                            return res, meta
                         if name in names:
-                            res = await session.call_tool(name, args)
-                            return _extract_mcp_result(res), {}
+                            return _extract_mcp_result(await session.call_tool(name, args)), {}
                         return {"error": f"未知工具：{name}"}, {}
 
-                    reply, steps, task, created = await _agent_loop(messages, _TOOL_SCHEMA_CACHE, execute)
+                    reply, steps, task, created, navigate = await _agent_loop(messages, tools, execute)
         else:
-            tools = _agent_tools(agent)
-
             async def execute(name, args):
-                if name == "publish_task":
-                    r = publish_task_handler(tid, args.get("task_name", "未命名任务"), args.get("source_object", "user"))
-                    return r, {"task": r}
-                if name == "create_chart":
-                    r = create_chart_handler(tid, args.get("question", ""))
-                    return r, {"created": {"kind": "chart", "id": r["chart_id"], "title": r["title"], "path": "/analyst"}}
-                if name == "create_dashboard":
-                    r = create_dashboard_handler(tid, args.get("question", ""))
-                    return r, {"created": {"kind": "dashboard", "id": r["dashboard_id"], "title": r["title"], "path": r["path"]}}
+                res, meta = _local_exec(name, args, tid)
+                if res is not None:
+                    return res, meta
                 return {"error": f"未知工具：{name}"}, {}
 
-            reply, steps, task, created = await _agent_loop(messages, tools, execute)
+            reply, steps, task, created, navigate = await _agent_loop(messages, _agent_tools(agent), execute)
 
-        return {**base, "reply": reply, "steps": steps, "task": task, "created": created}
+        return {**base, "reply": reply, "steps": steps, "task": task, "created": created, "navigate": navigate}
     except Exception as e:  # noqa: BLE001
-        return {**base, "reply": f"（智能助手处理出错：{e}）", "steps": [], "task": None, "created": None}
+        return {**base, "reply": f"（智能助手处理出错：{e}）", "steps": [], "task": None, "created": None, "navigate": None}
 
 
 @app.get("/tasks")

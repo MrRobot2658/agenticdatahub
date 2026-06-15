@@ -178,6 +178,8 @@ services:
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
     volumes:
       - ./services/mcp:/app/mcp:ro
+      # 功能页面路由表，供智能助手「打开页面」导航
+      - ./docs/page-routes.md:/app/page-routes.md:ro
     networks:
       - agenticdatahub-net
     restart: unless-stopped

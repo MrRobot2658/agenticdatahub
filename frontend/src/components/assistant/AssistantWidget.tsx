@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Sparkles, X, Send, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Spinner } from "../ui";
 import { useLang } from "../../context/LangContext";
 import { useTenant } from "../../context/TenantContext";
@@ -25,6 +25,7 @@ interface UiMessage {
 export default function AssistantWidget() {
   const { tr } = useLang();
   const { tenant } = useTenant();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
@@ -80,6 +81,11 @@ export default function AssistantWidget() {
         { role: "assistant", content: res.reply, steps: res.steps, task: res.task, agentName: res.agent_name, created: res.created },
       ]);
       if (res.task?.run_id) pollTask(res.task.run_id);
+      // 助手要求「打开页面」：跳转并收起面板
+      if (res.navigate?.path) {
+        const path = res.navigate.path;
+        setTimeout(() => { setOpen(false); navigate(path); }, 400);
+      }
     } catch (e: any) {
       const errText = e?.response?.data?.detail || e?.message || tr("请求失败", "Request failed");
       setMessages((prev) => [...prev, { role: "assistant", content: String(errText) }]);

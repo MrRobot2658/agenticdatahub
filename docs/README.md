@@ -21,7 +21,8 @@
 | 12 | 分析 Analyst | —（看板 + NL 生成） | 真实 | [12-analyst.md](./12-analyst.md) |
 
 > 跨模块技术文档已并入对应模块：**实时链路架构设计 + 规模扩展对照** 见 [00-platform](./00-platform.md)；**ID-Mapping 画像水平伸缩方案 + MCP 调用链路** 见 [02-unify](./02-unify.md)。
-> 全局能力（非独立一级菜单）：**智能助手**（右上角，DeepSeek + MCP，见 [00-platform](./00-platform.md)）· **登录门禁**（团队成员即账号，见 [09-settings](./09-settings.md)）。
+> 全局能力（非独立一级菜单）：**智能助手**（右上角，多智能体：数据查询/分析/任务/导航，见 [00-platform](./00-platform.md)）· **登录门禁**（团队成员即账号，见 [09-settings](./09-settings.md)）。
+> 辅助文档：[page-routes.md](./page-routes.md) —— 全部功能页面路由表，智能助手默认加载用于「打开页面」导航。
 
 ## 文档模板（每个模块统一结构）
 
