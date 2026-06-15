@@ -7,6 +7,7 @@ import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import AppsPage from "./pages/AppsPage";
+import AnalystPage from "./pages/AnalystPage";
 import FilterPage from "./pages/FilterPage";
 import EtlPage from "./pages/EtlPage";
 import EtlFlowPage from "./pages/EtlFlowPage";
@@ -104,6 +105,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/knowledge" element={<KnowledgeBasePage />} />
           <Route path="/apps" element={<AppsPage />} />
+          <Route path="/analyst" element={<AnalystPage />} />
 
           {/* Connections */}
           <Route path="/connections" element={<ConnectionsPage />} />

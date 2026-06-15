@@ -60,6 +60,7 @@ from auth_api import router as auth_router
 from scheduler_api import router as scheduler_router
 from kb_api import router as kb_router
 from apps_api import router as apps_router
+from analyst_api import router as analyst_router
 
 TAGS = [
     {"name": "系统", "description": "健康检查"},
@@ -513,6 +514,7 @@ app.include_router(auth_router)
 app.include_router(scheduler_router)
 app.include_router(kb_router)
 app.include_router(apps_router)
+app.include_router(analyst_router)
 
 
 def custom_openapi():
