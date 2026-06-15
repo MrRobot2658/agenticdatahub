@@ -5,6 +5,8 @@ import { LangProvider } from "./context/LangContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
+import AppsPage from "./pages/AppsPage";
 import FilterPage from "./pages/FilterPage";
 import EtlPage from "./pages/EtlPage";
 import EtlFlowPage from "./pages/EtlFlowPage";
@@ -100,6 +102,8 @@ export default function App() {
                 <Routes>
           {/* Overview */}
           <Route path="/" element={<Dashboard />} />
+          <Route path="/knowledge" element={<KnowledgeBasePage />} />
+          <Route path="/apps" element={<AppsPage />} />
 
           {/* Connections */}
           <Route path="/connections" element={<ConnectionsPage />} />

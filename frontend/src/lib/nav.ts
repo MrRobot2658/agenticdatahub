@@ -7,7 +7,7 @@ import {
   EyeOff, BadgeCheck, Trash2,
   Gauge, BellRing, ScrollText,
   Building2, KeyRound, History, ShoppingCart, Package, Store,
-  GitBranch, GitMerge,
+  GitBranch, GitMerge, Library, Blocks,
   type LucideIcon,
 } from "lucide-react";
 
@@ -62,6 +62,12 @@ export const SECTIONS: NavSection[] = [
       { label: "客户列表", term: "Accounts", to: "/accounts", icon: Building2 },
       { label: "合并日志", term: "Merge Log", to: "/accounts/-/merge-log", icon: GitMerge },
     ],
+  },
+  {
+    label: "知识库", term: "Knowledge", to: "/knowledge", icon: Library,
+  },
+  {
+    label: "应用", term: "Apps", to: "/apps", icon: Blocks,
   },
   {
     label: "触达", term: "Engage", to: "/engage", icon: Megaphone,

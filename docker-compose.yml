@@ -243,6 +243,10 @@ services:
       AIRFLOW_PASSWORD: ${AIRFLOW_PASSWORD:-admin}
       AIRFLOW_DAG_ID: ${AIRFLOW_DAG_ID:-agenticdatahub_pipeline}
       AIRFLOW_UI_URL: ${AIRFLOW_UI_URL:-http://localhost:8088}
+      # 知识库文件存储目录（云盘式多模态存储）
+      KB_STORAGE_DIR: /data/kb
+    volumes:
+      - kb_data:/data/kb
     networks:
       - agenticdatahub-net
     restart: unless-stopped
@@ -282,6 +286,7 @@ volumes:
   redis_data:
   frontend_dist:
   airflow_data:
+  kb_data:
 
 networks:
   agenticdatahub-net:
