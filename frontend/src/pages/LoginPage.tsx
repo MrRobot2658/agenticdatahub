@@ -37,7 +37,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">AgenticDataHub</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Data Agent</h1>
           <p className="mt-1 text-sm text-gray-500">
             {tr("智能实时数据底座", "Intelligent Real-time Data Foundation")}
           </p>

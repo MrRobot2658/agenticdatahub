@@ -121,6 +121,7 @@ export const FOOTER_SECTION: NavSection = {
     { label: "API 令牌", term: "API Tokens", to: "/settings/tokens", icon: KeyRound },
     { label: "审计日志", term: "Audit Trail", to: "/settings/audit", icon: History },
     { label: "租户管理", term: "Tenant Management", to: "/settings/tenants", icon: Building2 },
+    { label: "MCP", term: "MCP", to: "/settings/mcp", icon: Blocks },
   ],
 };
 

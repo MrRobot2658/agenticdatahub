@@ -9,7 +9,7 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
   );
 }
 
-export function Badge({ children, color = "gray" }: { children: ReactNode; color?: string }) {
+export function Badge({ children, color = "gray", title }: { children: ReactNode; color?: string; title?: string }) {
   const map: Record<string, string> = {
     gray: "bg-gray-100 text-gray-600",
     brand: "bg-brand-50 text-brand-600",
@@ -18,7 +18,7 @@ export function Badge({ children, color = "gray" }: { children: ReactNode; color
     red: "bg-red-50 text-red-600",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${map[color] || map.gray}`}>
+    <span title={title} className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${map[color] || map.gray}`}>
       {children}
     </span>
   );

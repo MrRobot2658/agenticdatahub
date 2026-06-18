@@ -1,140 +1,48 @@
-// 主动式埋点 Copilot：浏览器行为采集器（前端单例）。
-// 缓冲行为事件 → 命中触发点（切页 / idle 超时 / 攒够 N 条 / 强信号）批量 POST /observe，
-// 后端返回主动建议时通过订阅回调交给侧边栏。仅采集元信息（路径/动作/计数/错误码），不采集敏感字段。
-import { observeBehavior, type BehaviorEvent, type ProactiveSuggestion } from "../api/assistant";
-
-const SESSION_KEY = "cdp_session_id";
-const DND_KEY = "cdp_assistant_dnd";
-
-function genSession(): string {
-  try {
-    const ex = sessionStorage.getItem(SESSION_KEY);
-    if (ex) return ex;
-    const id = `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-    sessionStorage.setItem(SESSION_KEY, id);
-    return id;
-  } catch {
-    return `s_${Date.now()}`;
-  }
-}
+// 轻量上下文记录器（前端单例）。
+// 历史：曾是「主动式埋点 Copilot」——采集鼠标/idle/反复横跳等行为并 POST /observe，
+// 由后端反推意图、推送主动建议气泡。对话式（agent-first）形态下已废弃该模式：
+// 不再监控行为、不再上报、不再弹窗。仅保留当前页面上下文与最小 API，供既有调用方（client.ts
+// 的错误埋点等）无痛引用。建议改由 agent 在对话中顺势给出（纯反应式）。
+import { type ProactiveSuggestion } from "../api/assistant";
 
 type SuggestionListener = (s: ProactiveSuggestion) => void;
-type BehaviorType = BehaviorEvent["type"];
 
 class Tracker {
-  private sessionId = genSession();
   private tenant = 0;
   private userId: number | undefined;
-  private buffer: BehaviorEvent[] = [];
   private page: { path: string; name?: string } = { path: "/" };
-  private listeners: SuggestionListener[] = [];
-  private flushTimer: ReturnType<typeof setTimeout> | null = null;
-  private idleTimer: ReturnType<typeof setTimeout> | null = null;
-  private idledFired = false;
-  private lastActivity = 0;
-  private pageEnter = Date.now();
-  private recentPaths: { path: string; t: number }[] = []; // repeat（反复横跳）检测
-
-  private readonly MAX_BUFFER = 50;
-  private readonly FLUSH_AT = 10; // 攒够 N 条触发上报
-  private readonly DEBOUNCE_MS = 8000; // 普通事件去抖
-  private readonly IDLE_MS = 20000; // 停留无操作阈值
 
   configure(tenant: number, userId?: number) {
     this.tenant = tenant;
     this.userId = userId;
   }
 
+  /** 当前画布所在页面（供 agent 上下文，可选使用）。 */
+  get currentPage() {
+    return this.page;
+  }
+
+  // —— 以下为兼容旧调用的空操作（不再监控行为 / 不再上报 / 不再触发主动建议）——
   get dnd(): boolean {
-    try {
-      return localStorage.getItem(DND_KEY) === "1";
-    } catch {
-      return false;
-    }
+    return false;
   }
-  setDnd(v: boolean) {
-    try {
-      localStorage.setItem(DND_KEY, v ? "1" : "0");
-    } catch {
-      /* ignore */
-    }
+  setDnd(_v: boolean) {
+    /* no-op：主动建议已下线 */
   }
-
-  onSuggestion(cb: SuggestionListener): () => void {
-    this.listeners.push(cb);
-    return () => {
-      this.listeners = this.listeners.filter((x) => x !== cb);
-    };
+  onSuggestion(_cb: SuggestionListener): () => void {
+    return () => {};
   }
-
-  /** 记一条行为事件并按触发规则决定是否上报。 */
-  track(type: BehaviorType, payload?: Record<string, any>) {
-    const ev: BehaviorEvent = { type, ts: Date.now(), path: this.page.path, name: this.page.name, payload };
-    this.buffer.push(ev);
-    if (this.buffer.length > this.MAX_BUFFER) this.buffer.splice(0, this.buffer.length - this.MAX_BUFFER);
-    if (type !== "idle") this.noteActivity();
-
-    const strong = type === "error" || type === "empty_state" || type === "repeat" || type === "idle";
-    if (strong) this.flush(`signal:${type}`);
-    else if (this.buffer.length >= this.FLUSH_AT) this.flush("buffer");
-    else this.scheduleFlush();
+  track(_type: string, _payload?: Record<string, any>) {
+    /* no-op：不再缓冲/上报行为事件 */
   }
-
-  /** 路由变化：离开上一页时带上停留时长，并做 repeat 检测。 */
   pageView(path: string, name?: string) {
-    if (path === this.page.path) return;
-    const now = Date.now();
-    const dwell = now - this.pageEnter;
-    this.recentPaths = this.recentPaths.filter((r) => now - r.t < 60000);
-    this.recentPaths.push({ path, t: now });
-    const visits = this.recentPaths.filter((r) => r.path === path).length;
-    this.page = { path, name };
-    this.pageEnter = now;
-    this.track("page_view", { name, prev_dwell_ms: dwell });
-    if (visits >= 3) this.track("repeat", { path, count: visits });
+    this.page = { path, name }; // 仅更新上下文，不上报
   }
-
-  /** 真实用户活动（鼠标/键盘/点击）：重置 idle 计时。内部限频，避免每次 mousemove 都重置。 */
   noteActivity() {
-    const now = Date.now();
-    this.idledFired = false;
-    if (this.idleTimer && now - this.lastActivity < 1500) return;
-    this.lastActivity = now;
-    if (this.idleTimer) clearTimeout(this.idleTimer);
-    this.idleTimer = setTimeout(() => {
-      if (this.idledFired) return;
-      this.idledFired = true;
-      this.track("idle", { dwell_ms: Date.now() - this.pageEnter });
-    }, this.IDLE_MS);
+    /* no-op */
   }
-
-  private scheduleFlush() {
-    if (this.flushTimer) return;
-    this.flushTimer = setTimeout(() => {
-      this.flushTimer = null;
-      this.flush("timer");
-    }, this.DEBOUNCE_MS);
-  }
-
-  async flush(_reason: string) {
-    if (this.flushTimer) {
-      clearTimeout(this.flushTimer);
-      this.flushTimer = null;
-    }
-    if (!this.buffer.length || !this.tenant) return;
-    const batch = this.buffer.splice(0, this.buffer.length);
-    try {
-      const { suggestion } = await observeBehavior({
-        tenant_id: this.tenant,
-        user_id: this.userId,
-        session_id: this.sessionId,
-        page: this.page,
-        events: batch,
-      });
-      if (suggestion && !this.dnd) this.listeners.forEach((cb) => cb(suggestion));
-    } catch {
-      /* 上报失败静默，行为不阻塞页面 */
-    }
+  async flush(_reason?: string) {
+    /* no-op */
   }
 }
 

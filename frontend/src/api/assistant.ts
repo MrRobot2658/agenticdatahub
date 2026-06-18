@@ -35,6 +35,13 @@ export interface ChatNavigate {
   name: string;
 }
 
+// chat-native：agent 返回的内联渲染指令，前端据 type 渲染对应卡片（自行取数）。
+export type ChatView =
+  | { type: "profile"; one_id: number | string }
+  | { type: "audience"; query: string }
+  | { type: "table"; object: string; query?: string }
+  | { type: "chart"; question: string };
+
 export interface ChatResponse {
   reply: string;
   steps: ChatStep[];
@@ -43,6 +50,7 @@ export interface ChatResponse {
   agent_name?: string;
   created?: ChatCreated | null;
   navigate?: ChatNavigate | null;
+  views?: ChatView[];
 }
 
 export interface AssistantTask {
@@ -66,12 +74,19 @@ export interface McpToolsResponse {
   error?: string;
 }
 
+export type ChatMode = "agent" | "ask";
+
 export async function chatAssistant(
   tenant_id: number,
   messages: ChatMessage[],
-  user_id?: number,
+  opts?: { user_id?: number; conversation_id?: string; mode?: ChatMode },
 ): Promise<ChatResponse> {
-  const { data } = await assistantHttp.post("/chat", { tenant_id, messages, user_id });
+  const { data } = await assistantHttp.post("/chat", {
+    tenant_id, messages,
+    user_id: opts?.user_id,
+    conversation_id: opts?.conversation_id,
+    mode: opts?.mode ?? "agent",
+  });
   return data;
 }
 
@@ -82,13 +97,27 @@ export interface HistoryMessage {
   created_at?: string | null;
 }
 
-export async function getAssistantHistory(user_id: number, tenant_id: number, limit = 50): Promise<HistoryMessage[]> {
-  const { data } = await assistantHttp.get("/history", { params: { user_id, tenant_id, limit } });
+export async function getAssistantHistory(
+  user_id: number, tenant_id: number, conversation_id?: string, limit = 50,
+): Promise<HistoryMessage[]> {
+  const { data } = await assistantHttp.get("/history", { params: { user_id, tenant_id, conversation_id, limit } });
   return data.messages || [];
 }
 
-export async function clearAssistantHistory(user_id: number, tenant_id: number): Promise<void> {
-  await assistantHttp.delete("/history", { params: { user_id, tenant_id } });
+export async function clearAssistantHistory(user_id: number, tenant_id: number, conversation_id?: string): Promise<void> {
+  await assistantHttp.delete("/history", { params: { user_id, tenant_id, conversation_id } });
+}
+
+export interface Conversation {
+  conversation_id: string;
+  title: string;
+  updated_at?: string | null;
+  count?: number;
+}
+
+export async function listConversations(user_id: number, tenant_id: number): Promise<Conversation[]> {
+  const { data } = await assistantHttp.get("/conversations", { params: { user_id, tenant_id } });
+  return data.conversations || [];
 }
 
 export async function listAssistantTasks(): Promise<{ tasks: AssistantTask[] }> {

@@ -7,14 +7,19 @@ import { Timeline, type TimelineItem } from "../../components/segment/kit";
 import { searchObjects } from "../../api/client";
 import { useTenant } from "../../context/TenantContext";
 import { useLang } from "../../context/LangContext";
+import { CHANNEL_ID_FIELDS, channelLabel, channelGroup } from "../../lib/channels";
 
-// 用户档案详情 —— 真实数据：按 one_id 查 doris_user_wide，渲染身份标识 / 特征 / 行为时间线。
-const ID_FIELDS = ["one_id", "phone", "email", "wechat_openid", "wechat_unionid", "wework_extid", "form_id", "device"];
+// 用户档案详情 —— 真实数据：按 one_id 查 doris_user_wide，渲染身份标识 / 渠道分布 / 特征 / 行为时间线。
+const ID_FIELDS = ["one_id", "phone", "email", "wechat_openid", "wechat_unionid", "wework_extid",
+  "form_id", "device", "web_visitor_id", "wechat_mp_openid", "wechat_channels_id", "xiaohongshu_id", "douyin_id"];
+// 用于"渠道分布"卡片：宽表上有值的全域渠道身份列
+const CHANNEL_FIELDS = CHANNEL_ID_FIELDS.filter((f) => f !== "phone" && f !== "email");
 
 export default function ProfileDetailPage() {
   const { id = "" } = useParams();
   const { tenant } = useTenant();
-  const { tr } = useLang();
+  const { tr, lang } = useLang();
+  const en = lang === "en";
   const [row, setRow] = useState<Record<string, any> | null | undefined>(undefined);
   const [err, setErr] = useState<string | null>(null);
 
@@ -38,6 +43,8 @@ export default function ProfileDetailPage() {
   const props = (row.properties || {}) as Record<string, any>;
   const tags: string[] = Array.isArray(row.tags) ? row.tags : [];
   const identifiers = ID_FIELDS.map((f) => ({ type: f, value: row[f] })).filter((x) => x.value != null && x.value !== "");
+  // 渠道分布：宽表上命中的全域渠道，按大类分组
+  const activeChannels = CHANNEL_FIELDS.filter((f) => row[f] != null && row[f] !== "");
   const behaviors: any[] = Array.isArray(props.behaviors) ? props.behaviors : [];
   const events: TimelineItem[] = [...behaviors]
     .sort((a, b) => String(b.at).localeCompare(String(a.at)))
@@ -45,7 +52,7 @@ export default function ProfileDetailPage() {
     .map((b) => ({
       time: String(b.at ?? "").replace("T", " ").slice(0, 19),
       title: b.event_type || "event",
-      desc: [b.channel_type, b.channel_id].filter(Boolean).join(" · "),
+      desc: [channelLabel(b.channel_type, en), b.channel_id].filter(Boolean).join(" · "),
       tone: "green" as const,
     }));
 
@@ -58,11 +65,21 @@ export default function ProfileDetailPage() {
             <dl className="space-y-2">
               {identifiers.map((id) => (
                 <div key={id.type} className="flex items-center justify-between gap-3 text-sm">
-                  <dt className="text-gray-500">{id.type}</dt>
+                  <dt className="text-gray-500" title={id.type}>{id.type === "one_id" ? "OneID" : channelLabel(id.type, en)}</dt>
                   <dd className="truncate font-mono text-gray-900" title={String(id.value)}>{String(id.value)}</dd>
                 </div>
               ))}
             </dl>
+          </Card>
+          <Card className="p-5">
+            <div className="mb-3 font-semibold text-gray-900">{tr("渠道分布 Channels", "Channels")}</div>
+            {activeChannels.length ? (
+              <div className="flex flex-wrap gap-1.5">
+                {activeChannels.map((f) => (
+                  <Badge key={f} color="brand" title={`${channelGroup(f)} · ${f}`}>{channelLabel(f, en)}</Badge>
+                ))}
+              </div>
+            ) : <span className="text-sm text-gray-400">{tr("暂无渠道身份", "No channel identities")}</span>}
           </Card>
           <Card className="p-5">
             <div className="mb-3 font-semibold text-gray-900">{tr("特征 Traits", "Traits")}</div>
