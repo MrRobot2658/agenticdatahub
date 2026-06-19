@@ -1,5 +1,5 @@
 -- 智能助手聊天记录（按用户存储）。每条消息一行，user_id 为登录用户。
-USE agenticdatahub;
+USE dataagent;
 
 CREATE TABLE IF NOT EXISTS assistant_messages (
     id          BIGINT       NOT NULL AUTO_INCREMENT,

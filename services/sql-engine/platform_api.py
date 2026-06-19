@@ -135,7 +135,7 @@ class PlatformService:
     def infra_stats(self, tenant_id: int | None = None) -> dict[str, Any]:
         """各中间件计数 + 明细名单（表名/topic/流/业务对象），供前端右侧概览点击查看详情。
         业务对象记录数按 tenant_id 过滤（不传则全租户）。"""
-        db = self.config.get("database", "agenticdatahub")
+        db = self.config.get("database", "dataagent")
 
         def _first(row: Any) -> str:
             # 兼容 DictCursor / 普通游标

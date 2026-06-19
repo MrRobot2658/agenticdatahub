@@ -3,7 +3,7 @@
 -- 在原有 wechat_openid/wechat_unionid/wework_extid/form_id/phone/email/device
 -- 基础上，给 Doris 宽表新增 5 个全域渠道身份列（OneID 仍由 id-mapping 合并）。
 -- 原则：只做加法，幂等可重复执行（_add_col 先检信息架构再 ALTER）。
-USE agenticdatahub;
+USE dataagent;
 
 -- ── 幂等 DDL 辅助：仅当列不存在时才 ADD COLUMN ──────────────────────────
 DROP PROCEDURE IF EXISTS _add_col;

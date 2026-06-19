@@ -1,16 +1,16 @@
-name: agenticdatahub
+name: dataagent
 
 services:
   mysql:
     image: mysql:8.0
-    container_name: agenticdatahub-mysql
+    container_name: dataagent-mysql
     ports:
       - "3308:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: agenticdatahub
-      MYSQL_USER: agenticdatahub
-      MYSQL_PASSWORD: agenticdatahub123
+      MYSQL_DATABASE: dataagent
+      MYSQL_USER: dataagent
+      MYSQL_PASSWORD: dataagent123
     volumes:
       - mysql_data:/var/lib/mysql
       - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql
@@ -21,11 +21,11 @@ services:
       timeout: 5s
       retries: 20
     networks:
-      - agenticdatahub-net
+      - dataagent-net
 
   redis:
     image: redis:7-alpine
-    container_name: agenticdatahub-redis
+    container_name: dataagent-redis
     ports:
       - "6381:6379"
     volumes:
@@ -36,20 +36,20 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - agenticdatahub-net
+      - dataagent-net
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.1
-    container_name: agenticdatahub-zookeeper
+    container_name: dataagent-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     networks:
-      - agenticdatahub-net
+      - dataagent-net
 
   kafka:
     image: confluentinc/cp-kafka:7.6.1
-    container_name: agenticdatahub-kafka
+    container_name: dataagent-kafka
     depends_on:
       - zookeeper
     ports:
@@ -70,11 +70,11 @@ services:
       timeout: 10s
       retries: 10
     networks:
-      - agenticdatahub-net
+      - dataagent-net
 
   kafka-init:
     image: confluentinc/cp-kafka:7.6.1
-    container_name: agenticdatahub-kafka-init
+    container_name: dataagent-kafka-init
     depends_on:
       kafka:
         condition: service_healthy
@@ -101,11 +101,11 @@ services:
           --topic enriched-1001-events --partitions $$PP --replication-factor $$RF
         echo "Kafka topics ready (tier=$${SCALE_TIER:-dev}, partitions=$$PP/$$PS/$$PSH)"
     networks:
-      - agenticdatahub-net
+      - dataagent-net
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
-    container_name: agenticdatahub-kafka-ui
+    container_name: dataagent-kafka-ui
     depends_on:
       - kafka
     ports:
@@ -115,11 +115,11 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
       DYNAMIC_CONFIG_ENABLED: "true"
     networks:
-      - agenticdatahub-net
+      - dataagent-net
 
   nginx:
     image: nginx:1.27-alpine
-    container_name: agenticdatahub-nginx
+    container_name: dataagent-nginx
     depends_on:
       id-mapping:
         condition: service_started
@@ -137,14 +137,14 @@ services:
       # Data Agent 控制台：由 frontend 服务生产构建产出，写入 frontend_dist 卷，nginx 托管于 /console/
       - frontend_dist:/usr/share/nginx/console:ro
     networks:
-      - agenticdatahub-net
+      - dataagent-net
     restart: unless-stopped
 
   # 前端：生产构建（一次性）→ 把 dist 写入 frontend_dist 卷，由 nginx 静态托管。
   # 加入 compose 后随栈一起起，无需单独 npm run dev。
   frontend:
     image: node:20-bookworm-slim
-    container_name: agenticdatahub-frontend-build
+    container_name: dataagent-frontend-build
     working_dir: /app
     environment:
       # nginx 网关把 SPA 挂在 /console/ 下，构建产物的资源路径与路由 basename 都要带该前缀
@@ -155,14 +155,14 @@ services:
       - frontend_dist:/out
     command: sh -c "npm ci && npm run build && rm -rf /out/* && cp -r dist/. /out/"
     networks:
-      - agenticdatahub-net
+      - dataagent-net
 
   # 智能助手：DeepSeek 对话 + 桥接 MCP（services/mcp 以 stdio 拉起）+ 后台任务（接 reverse-ETL 调度模拟）
   assistant:
     build:
       context: ./services/assistant
       dockerfile: Dockerfile
-    container_name: agenticdatahub-assistant
+    container_name: dataagent-assistant
     depends_on:
       sql-engine:
         condition: service_started
@@ -177,9 +177,9 @@ services:
       # 聊天记录持久化（按用户）
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306
-      MYSQL_USER: agenticdatahub
-      MYSQL_PASSWORD: agenticdatahub123
-      MYSQL_DATABASE: agenticdatahub
+      MYSQL_USER: dataagent
+      MYSQL_PASSWORD: dataagent123
+      MYSQL_DATABASE: dataagent
       # MCP server 默认往 services/mcp/logs 写日志，但该目录以只读挂载，重定向到可写路径
       MCP_LOG_DIR: /tmp/mcp-logs
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
@@ -190,7 +190,7 @@ services:
       # 功能页面路由表，供智能助手「打开页面」导航
       - ./docs/page-routes.md:/app/page-routes.md:ro
     networks:
-      - agenticdatahub-net
+      - dataagent-net
     restart: unless-stopped
 
   id-mapping:
@@ -211,9 +211,9 @@ services:
     environment:
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306
-      MYSQL_USER: agenticdatahub
-      MYSQL_PASSWORD: agenticdatahub123
-      MYSQL_DATABASE: agenticdatahub
+      MYSQL_USER: dataagent
+      MYSQL_PASSWORD: dataagent123
+      MYSQL_DATABASE: dataagent
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
@@ -221,7 +221,7 @@ services:
       REDIS_TTL_SECONDS: 2592000
       ROOT_PATH: /ID-Mapping
     networks:
-      - agenticdatahub-net
+      - dataagent-net
     restart: unless-stopped
 
   sql-engine:
@@ -239,9 +239,9 @@ services:
       OLAP_BACKEND: mysql
       OLAP_HOST: mysql
       OLAP_PORT: 3306
-      OLAP_USER: agenticdatahub
-      OLAP_PASSWORD: agenticdatahub123
-      OLAP_DATABASE: agenticdatahub
+      OLAP_USER: dataagent
+      OLAP_PASSWORD: dataagent123
+      OLAP_DATABASE: dataagent
       SCALE_TIER: ${SCALE:-dev}
       DORIS_BE_SHARDS: ${DORIS_BE_SHARDS:-1}
       # 数据底座统计：实时查 Kafka topic 数（容器内监听地址）+ Flink(id-mapping) 任务数
@@ -255,21 +255,21 @@ services:
       AIRFLOW_API_URL: http://airflow:8080/api/v1
       AIRFLOW_USER: ${AIRFLOW_USER:-admin}
       AIRFLOW_PASSWORD: ${AIRFLOW_PASSWORD:-admin}
-      AIRFLOW_DAG_ID: ${AIRFLOW_DAG_ID:-agenticdatahub_pipeline}
+      AIRFLOW_DAG_ID: ${AIRFLOW_DAG_ID:-dataagent_pipeline}
       AIRFLOW_UI_URL: ${AIRFLOW_UI_URL:-http://localhost:8088}
       # 知识库文件存储目录（云盘式多模态存储）
       KB_STORAGE_DIR: /data/kb
     volumes:
       - kb_data:/data/kb
     networks:
-      - agenticdatahub-net
+      - dataagent-net
     restart: unless-stopped
 
   # Apache Airflow（单容器 dev：scheduler + webserver，SQLite + 串行执行器）
-  # 作为可视化编排 Pipelines 的真实调度后端；UI 在 :8088（admin/admin），DAG: agenticdatahub_pipeline
+  # 作为可视化编排 Pipelines 的真实调度后端；UI 在 :8088（admin/admin），DAG: dataagent_pipeline
   airflow:
     image: apache/airflow:2.9.3
-    container_name: agenticdatahub-airflow
+    container_name: dataagent-airflow
     ports:
       - "8088:8080"
     environment:
@@ -292,7 +292,7 @@ services:
           --firstname a --lastname b --role Admin --email admin@example.com || true
         airflow scheduler & exec airflow webserver
     networks:
-      - agenticdatahub-net
+      - dataagent-net
     restart: unless-stopped
 
 volumes:
@@ -303,5 +303,5 @@ volumes:
   kb_data:
 
 networks:
-  agenticdatahub-net:
+  dataagent-net:
     driver: bridge

@@ -30,8 +30,8 @@ S.trust_env = False
 
 # 直连 MySQL（与 conftest 一致：宿主 3308），仅用于群组 fixture 搭建与收尾清理
 MYSQL_CONFIG = {
-    "host": "localhost", "port": 3308, "user": "agenticdatahub",
-    "password": "agenticdatahub123", "database": "agenticdatahub",
+    "host": "localhost", "port": 3308, "user": "dataagent",
+    "password": "dataagent123", "database": "dataagent",
     "charset": "utf8mb4", "cursorclass": pymysql.cursors.DictCursor,
 }
 

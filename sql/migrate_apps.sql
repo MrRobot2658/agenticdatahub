@@ -1,6 +1,6 @@
 -- 应用市场：每租户已连接的应用（CRM / 广告 / 消息 / 分析等）。
 -- 应用目录是前端静态注册表（lib/apps.ts）；这里只存「某租户连接了哪些、状态、配置」。
-USE agenticdatahub;
+USE dataagent;
 
 CREATE TABLE IF NOT EXISTS installed_apps (
     tenant_id   BIGINT       NOT NULL,

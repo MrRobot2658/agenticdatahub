@@ -2,7 +2,7 @@
 
 - Airflow（scheduler + webserver）跑在 compose 的 airflow 服务，REST API v2 在 /api/v1。
 - 鉴权：basic auth（admin/admin）。
-- 模型：不为每个 pipeline 建 DAG，而是用一个参数化 DAG `agenticdatahub_pipeline` 承载所有运行，
+- 模型：不为每个 pipeline 建 DAG，而是用一个参数化 DAG `dataagent_pipeline` 承载所有运行，
   触发时把 pipeline 信息放进 dag_run.conf。触发 DAG run 是 Airflow 稳定支持的 API，简单可靠。
 - 路由前缀 /connections（与 connections_api 同前缀），经 nginx 暴露为 /api/connections/scheduler/*。
 """
@@ -17,7 +17,7 @@ from fastapi import APIRouter
 AIRFLOW_API = os.getenv("AIRFLOW_API_URL", "http://airflow:8080/api/v1").rstrip("/")
 AIRFLOW_USER = os.getenv("AIRFLOW_USER", "admin")
 AIRFLOW_PASSWORD = os.getenv("AIRFLOW_PASSWORD", "admin")
-AIRFLOW_DAG_ID = os.getenv("AIRFLOW_DAG_ID", "agenticdatahub_pipeline")
+AIRFLOW_DAG_ID = os.getenv("AIRFLOW_DAG_ID", "dataagent_pipeline")
 # 浏览器可达的 Airflow UI（容器内主机名 airflow 浏览器访问不到，故单独配置 localhost）
 AIRFLOW_UI = os.getenv("AIRFLOW_UI_URL", "http://localhost:8088")
 
@@ -108,7 +108,7 @@ def scheduler_health():
 
 @router.post("/scheduler/pause")
 def scheduler_pause(paused: bool = True):
-    """暂停/恢复调度（切换共享 DAG agenticdatahub_pipeline 的 is_paused）。
+    """暂停/恢复调度（切换共享 DAG dataagent_pipeline 的 is_paused）。
     注意：所有管道共用一个 DAG，故这是全局调度开关。"""
     return _client.set_paused(AIRFLOW_DAG_ID, paused)
 

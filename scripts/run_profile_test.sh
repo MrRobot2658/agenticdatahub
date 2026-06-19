@@ -22,9 +22,9 @@ done
 
 echo ""
 echo "========== 2. 执行数据库迁移 =========="
-docker exec -i agenticdatahub-mysql mysql -uagenticdatahub -pagenticdatahub123 agenticdatahub < sql/migrate_doris.sql
-docker exec -i agenticdatahub-mysql mysql -uagenticdatahub -pagenticdatahub123 agenticdatahub < sql/migrate_groups.sql
-docker exec -i agenticdatahub-mysql mysql -uagenticdatahub -pagenticdatahub123 --default-character-set=utf8mb4 agenticdatahub < sql/migrate_tags.sql
+docker exec -i dataagent-mysql mysql -udataagent -pdataagent123 dataagent < sql/migrate_doris.sql
+docker exec -i dataagent-mysql mysql -udataagent -pdataagent123 dataagent < sql/migrate_groups.sql
+docker exec -i dataagent-mysql mysql -udataagent -pdataagent123 --default-character-set=utf8mb4 dataagent < sql/migrate_tags.sql
 
 echo ""
 echo "========== 3. 安装测试依赖 =========="

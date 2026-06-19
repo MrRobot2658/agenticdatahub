@@ -22,8 +22,8 @@ from pydantic import BaseModel
 
 from executor import MysqlOlapExecutor
 
-PEPPER = "agenticdatahub"
-AUTH_SECRET = os.getenv("AUTH_SECRET", "agenticdatahub-dev-secret")
+PEPPER = "dataagent"
+AUTH_SECRET = os.getenv("AUTH_SECRET", "dataagent-dev-secret")
 TOKEN_TTL = int(os.getenv("AUTH_TOKEN_TTL", str(7 * 24 * 3600)))  # 7 天
 
 

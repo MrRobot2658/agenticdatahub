@@ -1,5 +1,5 @@
 -- Analyst：保存的图表。图表 = {标题, 图表类型, 数据源 key}；数据源是后端白名单聚合。
-USE agenticdatahub;
+USE dataagent;
 
 CREATE TABLE IF NOT EXISTS analyst_charts (
     id          VARCHAR(64)  NOT NULL,

@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Sparkles, Send, Plus, Trash2, Paperclip, X, ChevronDown, LogOut, Bot, MessageCircleQuestion,
-  UserSearch, Filter, BarChart3, MapPin, type LucideIcon,
+  UserSearch, Filter, BarChart3, MapPin, Settings, type LucideIcon,
 } from "lucide-react";
 import { Spinner } from "../ui";
 import Markdown from "../assistant/Markdown";
 import ViewCard from "./cards/ViewCard";
 import TaskStatusPanel from "./TaskStatusPanel";
+import SettingsPanel from "./SettingsPanel";
+import { getMemory, addTokens } from "../../lib/prefs";
 import { useLang, type Lang } from "../../context/LangContext";
 import { useTenant } from "../../context/TenantContext";
 import { useAuth } from "../../context/AuthContext";
-import { EmbeddedCtx } from "../../context/EmbeddedContext";
 import {
   chatAssistant, listConversations, getAssistantHistory, clearAssistantHistory, listAssistantTasks,
   type ChatMessage, type ChatStep, type ChatTask, type ChatCreated, type ChatView, type ChatMode, type Conversation,
@@ -52,9 +53,9 @@ export default function ChatApp() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [mode, setMode] = useState<ChatMode>("agent");
   const [loading, setLoading] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const navigate = useNavigate();
   const loc = useLocation();
-  const onPage = loc.pathname !== "/";   // 非首页 → 以抽屉卡片展示对应页面
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -144,7 +145,12 @@ export default function ChatApp() {
           ...messages.map((m) => ({ role: m.role, content: m.content })),
           { role: "user", content: sentContent },
         ];
+        // 注入长期记忆（设置面板）作为系统上下文
+        const mem = getMemory();
+        if (mem) payload.unshift({ role: "system", content: `【长期记忆】\n${mem}` });
+        addTokens(sentContent);
         const res = await chatAssistant(tenant, payload, { user_id: user?.id, conversation_id: convId, mode });
+        addTokens(res.reply);
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: res.reply, steps: res.steps, task: res.task, agentName: res.agent_name, created: res.created, views: res.views },
@@ -234,6 +240,11 @@ export default function ChatApp() {
               <LogOut className="h-4 w-4" />
             </button>
           </div>
+          {/* 设置（记忆 / 技能 / MCP / Token 消耗）—— 放在管理员下面 */}
+          <button type="button" onClick={() => setSettingsOpen(true)}
+            className="mt-2 flex w-full items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-[13px] font-medium text-gray-600 hover:border-brand-300 hover:bg-brand-50">
+            <Settings className="h-4 w-4" /> {tr("设置", "Settings")}
+          </button>
         </div>
       </aside>
 
@@ -241,23 +252,8 @@ export default function ChatApp() {
       <main className="flex min-w-0 flex-1 flex-col">
         <div ref={listRef} className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl space-y-5 px-4 py-5">
-            {/* 菜单/路由打开的页面 → 聊天列内紧凑卡片（限高滚动，适配对话框） */}
-            {onPage && (
-              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/60 px-3 py-1.5">
-                  <span className="text-[12px] font-semibold text-gray-500">{tr("功能页面", "Page")}</span>
-                  <button type="button" onClick={() => navigate("/")} className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title={tr("关闭", "Close")}>
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <div className="max-h-[68vh] overflow-y-auto">
-                  <EmbeddedCtx.Provider value={true}><Outlet /></EmbeddedCtx.Provider>
-                </div>
-              </div>
-            )}
-
-            {/* 新会话首页：清空页面，仅展示常见任务（未开页面且无消息时）*/}
-            {!onPage && messages.length === 0 && !loading && (
+            {/* 新会话首页：清空页面，仅展示常见任务（无消息时）*/}
+            {messages.length === 0 && !loading && (
               <div className="flex min-h-[60vh] flex-col items-center justify-center py-8">
                 <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
                   <Sparkles className="h-6 w-6" />
@@ -368,8 +364,11 @@ export default function ChatApp() {
         </div>
       </main>
 
-      {/* 右侧：当前 Airflow 任务状态 */}
+      {/* 右侧：数据底座概览 + Airflow 任务 */}
       <TaskStatusPanel />
+
+      {/* 设置弹层（由左侧菜单「管理员」下方的按钮触发）*/}
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

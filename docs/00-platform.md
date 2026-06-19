@@ -287,10 +287,10 @@
 
 | 生产组件 | 本地实现 | 路径 |
 |---------|---------|------|
-| Kafka | `agenticdatahub-kafka` | `docker-compose.yml` |
+| Kafka | `dataagent-kafka` | `docker-compose.yml` |
 | Flink Job | Python id-mapping 服务 | `services/id-mapping/main.py` |
-| Redis | `agenticdatahub-redis` | 端口 6381 |
-| MySQL | `agenticdatahub-mysql` | `sql/init.sql` |
+| Redis | `dataagent-redis` | 端口 6381 |
+| MySQL | `dataagent-mysql` | `sql/init.sql` |
 | Doris | MySQL 模拟表 `doris_*` | `sql/init.sql` |
 
 Flink 生产 Job 模板见 [`docs/flink/`](./flink/README.md)。
@@ -429,7 +429,7 @@ Kafka(user-events)
 
 > Job-1 含 merge 状态机，**必须用 DataStream**，不适合纯 Flink SQL。
 
-模板：`docs/flink/src/main/java/com/agenticdatahub/flink/IdMappingJob.java`
+模板：`docs/flink/src/main/java/com/dataagent/flink/IdMappingJob.java`
 
 #### 3.2 Job-2：用户画像实时聚合（Flink SQL）
 

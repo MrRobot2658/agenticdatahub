@@ -1,6 +1,6 @@
 -- 知识库：云盘式多模态文件存储 + 可关联到对象。
 -- 文件字节存盘（KB_STORAGE_DIR 卷），元数据落库；kb_links 把文件关联到对象（类型/记录）。
-USE agenticdatahub;
+USE dataagent;
 
 CREATE TABLE IF NOT EXISTS kb_files (
     id            VARCHAR(64)  NOT NULL,

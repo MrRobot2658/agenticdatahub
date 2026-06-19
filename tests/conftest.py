@@ -11,9 +11,9 @@ import requests
 MYSQL_CONFIG = {
     "host": os.getenv("TEST_MYSQL_HOST", "localhost"),
     "port": int(os.getenv("TEST_MYSQL_PORT", "3308")),
-    "user": os.getenv("TEST_MYSQL_USER", "agenticdatahub"),
-    "password": os.getenv("TEST_MYSQL_PASSWORD", "agenticdatahub123"),
-    "database": os.getenv("TEST_MYSQL_DATABASE", "agenticdatahub"),
+    "user": os.getenv("TEST_MYSQL_USER", "dataagent"),
+    "password": os.getenv("TEST_MYSQL_PASSWORD", "dataagent123"),
+    "database": os.getenv("TEST_MYSQL_DATABASE", "dataagent"),
     "charset": "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
 }

@@ -1,6 +1,6 @@
 -- 主动式埋点 Copilot：浏览器行为事件 + 已发出的主动建议（落库做上下文/分析/调优）。
 -- 只存元信息（页面路径、动作类型、计数、错误码），不存敏感字段。所有表带 tenant_id 隔离。
-USE agenticdatahub;
+USE dataagent;
 
 CREATE TABLE IF NOT EXISTS user_behavior_events (
     id          BIGINT       NOT NULL AUTO_INCREMENT,

@@ -1,5 +1,5 @@
 -- 自定义看板：一个看板 = 标题 + 一组图表数据源（sources）。内置看板（用户/客户/ROI）是前端页面，不入库。
-USE agenticdatahub;
+USE dataagent;
 
 CREATE TABLE IF NOT EXISTS analyst_dashboards (
     id          VARCHAR(64)  NOT NULL,

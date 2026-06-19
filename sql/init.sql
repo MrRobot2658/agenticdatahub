@@ -1,8 +1,8 @@
 -- 多租户实时 ID-Mapping 开发环境初始化
 -- 业务数据库: MySQL
 
-CREATE DATABASE IF NOT EXISTS agenticdatahub DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE agenticdatahub;
+CREATE DATABASE IF NOT EXISTS dataagent DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE dataagent;
 
 -- 租户配置
 CREATE TABLE IF NOT EXISTS tenants (

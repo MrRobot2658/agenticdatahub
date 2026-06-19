@@ -1,12 +1,12 @@
 #!/bin/bash
-# 应用 sql/migrate_*.sql 增量迁移到 agenticdatahub-mysql
+# 应用 sql/migrate_*.sql 增量迁移到 dataagent-mysql
 # 关键：用 --default-character-set=utf8mb4 避免管道导入中文乱码（双重编码）
 set -euo pipefail
 
-CONTAINER="${MYSQL_CONTAINER:-agenticdatahub-mysql}"
-DB="${MYSQL_DATABASE:-agenticdatahub}"
-USER="${MYSQL_USER:-agenticdatahub}"
-PASS="${MYSQL_PASSWORD:-agenticdatahub123}"
+CONTAINER="${MYSQL_CONTAINER:-dataagent-mysql}"
+DB="${MYSQL_DATABASE:-dataagent}"
+USER="${MYSQL_USER:-dataagent}"
+PASS="${MYSQL_PASSWORD:-dataagent123}"
 DIR="$(cd "$(dirname "$0")/.." && pwd)/sql"
 
 # 迁移之间存在依赖：migrate_modules.sql 会 ALTER tag_definitions / user_groups，

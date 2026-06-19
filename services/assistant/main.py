@@ -50,9 +50,9 @@ _TASK_STORE: list[dict] = []
 MYSQL_CFG = {
     "host": os.getenv("MYSQL_HOST", "mysql"),
     "port": int(os.getenv("MYSQL_PORT", "3306")),
-    "user": os.getenv("MYSQL_USER", "agenticdatahub"),
-    "password": os.getenv("MYSQL_PASSWORD", "agenticdatahub123"),
-    "database": os.getenv("MYSQL_DATABASE", "agenticdatahub"),
+    "user": os.getenv("MYSQL_USER", "dataagent"),
+    "password": os.getenv("MYSQL_PASSWORD", "dataagent123"),
+    "database": os.getenv("MYSQL_DATABASE", "dataagent"),
     "charset": "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
 }
@@ -487,7 +487,7 @@ async def agents() -> dict:
 
 @app.get("/mcp/tools")
 async def mcp_tools() -> dict:
-    server = {"name": "agenticdatahub-cdp", "transport": "stdio", "path": MCP_SERVER_PATH}
+    server = {"name": "dataagent-cdp", "transport": "stdio", "path": MCP_SERVER_PATH}
     try:
         schemas = _TOOL_SCHEMA_CACHE if _TOOL_SCHEMA_CACHE is not None else await _fetch_tool_schemas()
     except Exception as e:  # noqa: BLE001

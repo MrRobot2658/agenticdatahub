@@ -14,10 +14,10 @@ export NO_PROXY='*' no_proxy='*'
 
 T="${1:-1001}"
 BASE="${SEED_BASE:-http://localhost:8080/api}"   # 经 nginx 网关，剥 /api 转 sql-engine
-MYSQL_CONTAINER="${MYSQL_CONTAINER:-agenticdatahub-mysql}"
-MYSQL_USER="${MYSQL_USER:-agenticdatahub}"
-MYSQL_PASSWORD="${MYSQL_PASSWORD:-agenticdatahub123}"
-MYSQL_DATABASE="${MYSQL_DATABASE:-agenticdatahub}"
+MYSQL_CONTAINER="${MYSQL_CONTAINER:-dataagent-mysql}"
+MYSQL_USER="${MYSQL_USER:-dataagent}"
+MYSQL_PASSWORD="${MYSQL_PASSWORD:-dataagent123}"
+MYSQL_DATABASE="${MYSQL_DATABASE:-dataagent}"
 
 # 用数组承载参数，避免 --noproxy * 之类被 shell glob 展开
 CURL=(curl -s --max-time 15)

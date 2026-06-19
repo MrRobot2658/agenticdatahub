@@ -30,7 +30,7 @@ done
 
 echo ""
 echo "========== MySQL 直接查询 (tenant=$TENANT_ID) =========="
-docker exec agenticdatahub-mysql mysql -uagenticdatahub -pagenticdatahub123 agenticdatahub -e "
+docker exec dataagent-mysql mysql -udataagent -pdataagent123 dataagent -e "
   SELECT tenant_id, channel_type, channel_id, one_id, source FROM id_mapping WHERE tenant_id=$TENANT_ID ORDER BY one_id;
   SELECT tenant_id, user_id, tags, properties FROM user_profile WHERE tenant_id=$TENANT_ID;
 " 2>/dev/null

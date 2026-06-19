@@ -6,7 +6,7 @@
 
 > **名字含义**：**Agent** —— DeepSeek 驱动的自然语言圈人/查询与 MCP 工具，让 LLM 安全地操作数据平台（候选 DSL 必须过校验层，绝不直出 SQL）；**DataHub** —— 多源数据接入的归一中枢，把小程序/企微/表单/App/批量导入等多渠道数据，实时归一为 OneID 并打宽成统一画像。
 
-**仓库**：https://github.com/MrRobot2658/agenticdatahub
+**仓库**：https://github.com/MrRobot2658/dataagent
 
 > 设计文档（均在 [`docs/`](./docs/README.md) 下，按一级目录分模块）：1 平台底座 + 9 业务模块 + 3 扩展菜单（[知识库](./docs/10-knowledge.md) / [应用](./docs/11-apps.md) / [分析](./docs/12-analyst.md)），各含 详细/技术设计 + TODOs。实时链路架构/规模 → [00-platform](./docs/00-platform.md)；ID-Mapping 画像伸缩 / MCP 调用链路 → [02-unify](./docs/02-unify.md)。· [OpenAPI](./swagger/) · [前端说明](./frontend/README.md)
 
@@ -156,8 +156,8 @@
 
 ```bash
 # 0. 克隆
-git clone https://github.com/MrRobot2658/agenticdatahub.git   # 或 SSH: git@github.com:MrRobot2658/agenticdatahub.git
-cd agenticdatahub
+git clone https://github.com/MrRobot2658/dataagent.git   # 或 SSH: git@github.com:MrRobot2658/dataagent.git
+cd dataagent
 
 # 1. 启动全栈（含前端构建）
 #    MySQL/Redis/Kafka/SQL Engine/ID-Mapping/Nginx/Airflow/智能助手 + 前端生产构建
@@ -194,7 +194,7 @@ cd frontend && npm install && npm run dev   # → http://localhost:5173/
 | SQL Engine Swagger | http://localhost:8002/docs |
 | ID-Mapping Swagger | http://localhost:8001/docs |
 | Airflow UI | http://localhost:8088/ · 账号 `admin` / `admin` |
-| MySQL | `localhost:3308` · db `agenticdatahub` · user `agenticdatahub` / `agenticdatahub123` |
+| MySQL | `localhost:3308` · db `dataagent` · user `dataagent` / `dataagent123` |
 
 **真实 vs Mock**：带「Mock 数据」角标的页面是前端演示，未接后端、改动不落库。**真实数据页**（数据源导入、用户档案 Profiles、受众 Audiences、计算特征）走 SQL Engine→MySQL，操作即落库。
 
@@ -213,7 +213,7 @@ cd frontend && npm install && npm run dev   # → http://localhost:5173/
 「连接 › 可视化编排」拖拽节点连线 → **保存为管道**；在「管道 Pipelines」页点**执行**，SQL Engine 通过 Airflow REST API 触发 DAG 真实运行（管道页顶部有 Airflow 连接状态条 + 「打开 Airflow」入口）。
 
 - 调度后端：单容器 Airflow（scheduler + webserver，SQLite + SequentialExecutor），UI `http://localhost:8088`（`admin`/`admin`）。
-- 承载 DAG：`airflow/dags/agenticdatahub_pipeline.py` —— 一个**参数化通用 DAG**，所有管道运行共用；触发时把 `tenant_id / pipeline_name / 节点列表` 放进 `dag_run.conf`。DAG 用**动态任务映射**（`.expand`）在运行时按 conf 的节点数**展开成多任务**：`plan → run_node × N → finish`，每个画布节点对应一个 task 实例（无需为每个管道单独建 DAG）。画布连线顺序（edges）暂未体现为任务依赖，mapped 任务并行执行。
+- 承载 DAG：`airflow/dags/dataagent_pipeline.py` —— 一个**参数化通用 DAG**，所有管道运行共用；触发时把 `tenant_id / pipeline_name / 节点列表` 放进 `dag_run.conf`。DAG 用**动态任务映射**（`.expand`）在运行时按 conf 的节点数**展开成多任务**：`plan → run_node × N → finish`，每个画布节点对应一个 task 实例（无需为每个管道单独建 DAG）。画布连线顺序（edges）暂未体现为任务依赖，mapped 任务并行执行。
 - 接口：`POST /api/connections/pipelines/{id}/execute` 触发；`GET /api/connections/scheduler/health` 查连通性。Airflow 不可达时执行会**优雅降级**为本地模拟（不报错）。
 - 配置（`docker-compose.yml` 的 sql-engine 环境变量）：`AIRFLOW_API_URL` / `AIRFLOW_USER` / `AIRFLOW_PASSWORD` / `AIRFLOW_DAG_ID` / `AIRFLOW_UI_URL`。
 - 改/加 DAG：编辑 `airflow/dags/` 下的 py 文件（已挂载进容器），Airflow scheduler 约 30s 内自动加载。

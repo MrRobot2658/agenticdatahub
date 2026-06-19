@@ -145,7 +145,7 @@ content_slide(8, "可视化编排 Pipelines · Apache Airflow 真实调度", [
     ("拖拽编排", "左侧连接器节点拖到画布连线 → 保存为管道；管道列表（行表）→ 详情"),
     ("真实触发", "点执行经 Airflow REST API 触发 DAG；参数化通用 DAG 用动态任务映射按节点展开成多任务"),
     ("可观测可控", "详情含拓扑、执行历史、暂停/恢复调度；Airflow 不可达时优雅降级本地模拟"),
-], foot="Airflow UI :8088（admin/admin）· DAG: agenticdatahub_pipeline")
+], foot="Airflow UI :8088（admin/admin）· DAG: dataagent_pipeline")
 
 # ── 10 知识库 ────────────────────────────────────────────────────────────────
 content_slide(9, "知识库 Knowledge Base · 云盘式多模态存储", [
@@ -167,7 +167,7 @@ content_slide(11, "技术栈 · 部署", [
     ("后端", "FastAPI（SQL Engine / ID-Mapping / 智能助手）+ MySQL + Redis + Kafka + Airflow"),
     ("一键起栈", "docker compose up -d --build（含前端构建）→ http://localhost:8080/console/"),
     ("登录", "强制门禁；演示账号 admin@acme.com / demo123"),
-], foot="仓库 github.com/MrRobot2658/agenticdatahub")
+], foot="仓库 github.com/MrRobot2658/dataagent")
 
 # ── 13 结尾 ──────────────────────────────────────────────────────────────────
 end = prs.slides.add_slide(BLANK)

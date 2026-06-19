@@ -130,6 +130,12 @@ export async function getMcpTools(): Promise<McpToolsResponse> {
   return data;
 }
 
+export interface AgentDef { key: string; name: string; desc: string }
+export async function getAgents(): Promise<AgentDef[]> {
+  const { data } = await assistantHttp.get("/agents");
+  return (data.agents ?? []) as AgentDef[];
+}
+
 // ── 主动式埋点 Copilot ────────────────────────────────────────────────────────
 export interface BehaviorEvent {
   type: "page_view" | "click" | "search" | "empty_state" | "error" | "idle" | "repeat";

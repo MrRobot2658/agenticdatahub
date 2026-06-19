@@ -15,15 +15,15 @@ from airflow.decorators import dag, task
 
 
 @dag(
-    dag_id="agenticdatahub_pipeline",
+    dag_id="dataagent_pipeline",
     description="AgenticDataHub 可视化编排 Pipelines 的通用执行 DAG（按 conf 动态展开为多任务）",
     schedule=None,
     start_date=datetime(2024, 1, 1),
     catchup=False,
     is_paused_upon_creation=False,
-    tags=["agenticdatahub", "pipeline"],
+    tags=["dataagent", "pipeline"],
 )
-def agenticdatahub_pipeline():
+def dataagent_pipeline():
     @task
     def plan(**context) -> list:
         """读取 conf.nodes，归一化为待执行节点列表；为空时兜底单节点。"""
@@ -59,4 +59,4 @@ def agenticdatahub_pipeline():
     finish(run_node.expand(node=plan()))
 
 
-agenticdatahub_pipeline()
+dataagent_pipeline()

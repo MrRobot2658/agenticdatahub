@@ -6,71 +6,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import ChatApp from "./components/chat/ChatApp";
 
-// 既有页面（Layout 已是画布模式）。chat-native 下它们不再是产品主入口，
-// 而是「按操作路径展示的卡片」：作为布局路由 ChatApp 的子路由渲染进 <Outlet/>（抽屉里）。
-import Dashboard from "./pages/Dashboard";
-import KnowledgeBasePage from "./pages/KnowledgeBasePage";
-import AppsPage from "./pages/AppsPage";
-import AnalystPage from "./pages/AnalystPage";
-import UserDashboardPage from "./pages/analyst/UserDashboardPage";
-import AccountDashboardPage from "./pages/analyst/AccountDashboardPage";
-import RoiDashboardPage from "./pages/analyst/RoiDashboardPage";
-import CustomDashboardPage from "./pages/analyst/CustomDashboardPage";
-import FilterPage from "./pages/FilterPage";
-import EtlPage from "./pages/EtlPage";
-import EtlFlowPage from "./pages/EtlFlowPage";
-import ObjectListPage from "./pages/ObjectListPage";
-import ConnectionsPage from "./pages/ConnectionsPage";
-import SourceCatalogPage from "./pages/SourceCatalogPage";
-import DestinationsPage from "./pages/DestinationsPage";
-import UnifyPage from "./pages/UnifyPage";
-import ObjectsHubPage from "./pages/ObjectsHubPage";
-import AccountsPage from "./pages/AccountsPage";
-import AccountDetailPage from "./pages/AccountDetailPage";
-import EngagePage from "./pages/EngagePage";
-import TagsPage from "./pages/TagsPage";
-import TenantsPage from "./pages/platform/TenantsPage";
-import TenantDetailPage from "./pages/platform/TenantDetailPage";
-import PipelinesPage from "./pages/PipelinesPage";
-import PipelineDetailPage from "./pages/PipelineDetailPage";
-import GroupsPage from "./pages/GroupsPage";
-import ObjectModelPage from "./pages/ObjectModelPage";
-import ObjectRecordDetailPage from "./pages/ObjectRecordDetailPage";
-import AccountMergeLogPage from "./pages/AccountMergeLogPage";
-import JourneyDetailPage from "./pages/segment/JourneyDetailPage";
-import BroadcastDetailPage from "./pages/segment/BroadcastDetailPage";
-import TrackingPlanDetailPage from "./pages/segment/TrackingPlanDetailPage";
-import FunctionsPage from "./pages/segment/FunctionsPage";
-import ReverseEtlPage from "./pages/segment/ReverseEtlPage";
-import WarehousesPage from "./pages/segment/WarehousesPage";
-import SourceDetailPage from "./pages/segment/SourceDetailPage";
-import ProfileDetailPage from "./pages/segment/ProfileDetailPage";
-import IdentityResolutionPage from "./pages/segment/IdentityResolutionPage";
-import SqlTraitsPage from "./pages/segment/SqlTraitsPage";
-import PredictionsPage from "./pages/segment/PredictionsPage";
-import ProfilesSyncPage from "./pages/segment/ProfilesSyncPage";
-import JourneysPage from "./pages/segment/JourneysPage";
-import BroadcastsPage from "./pages/segment/BroadcastsPage";
-import AudienceDetailPage from "./pages/segment/AudienceDetailPage";
-import TrackingPlansPage from "./pages/segment/TrackingPlansPage";
-import ViolationsPage from "./pages/segment/ViolationsPage";
-import TransformationsPage from "./pages/segment/TransformationsPage";
-import PrivacyDataControlsPage from "./pages/PrivacyDataControlsPage";
-import PrivacyConsentPage from "./pages/PrivacyConsentPage";
-import PrivacyDeletionPage from "./pages/PrivacyDeletionPage";
-import MonitorDeliveryPage from "./pages/MonitorDeliveryPage";
-import MonitorAlertsPage from "./pages/MonitorAlertsPage";
-import MonitorEventLogsPage from "./pages/MonitorEventLogsPage";
-import SettingsGeneralPage from "./pages/segment/SettingsGeneralPage";
-import AccessPage from "./pages/segment/AccessPage";
-import TokensPage from "./pages/segment/TokensPage";
-import AuditPage from "./pages/segment/AuditPage";
-import SettingsMcpPage from "./pages/segment/SettingsMcpPage";
-
-// 路由 basename 与 Vite 的 base 保持一致：
-//  - Vercel（base="/"）→ 根路径，BASENAME="/"
-//  - Nginx 网关（base="/console/"）→ BASENAME="/console"
-// 不再写死 PROD→"/console"，否则 Vercel 根路径下任何路由都不匹配 → 白屏。
+// 路由 basename 与 Vite 的 base 保持一致（Vercel="/", nginx="/console"）。
 const BASENAME = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -86,8 +22,8 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-// chat-native：单一 BrowserRouter。ChatApp 是常驻布局（对话 + 左侧菜单），
-// 页面作为其子路由渲染进 <Outlet/>，由 ChatApp 以抽屉卡片呈现；"/" 为对话+欢迎页。
+// 纯对话形态：删除全部功能页，只保留登录 + ChatApp 外壳。
+// 一切数据操作经聊天（assistant → MCP 工具）完成，结果以对话内联卡片(ViewCard)呈现。
 export default function App() {
   return (
     <TenantProvider>
@@ -96,67 +32,8 @@ export default function App() {
       <BrowserRouter basename={BASENAME}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route element={<RequireAuth><ChatApp /></RequireAuth>}>
-            <Route path="/" element={null} />
-            <Route path="/knowledge" element={<KnowledgeBasePage />} />
-            <Route path="/apps" element={<AppsPage />} />
-            <Route path="/analyst" element={<AnalystPage />} />
-            <Route path="/analyst/dashboards/user" element={<UserDashboardPage />} />
-            <Route path="/analyst/dashboards/account" element={<AccountDashboardPage />} />
-            <Route path="/analyst/dashboards/roi" element={<RoiDashboardPage />} />
-            <Route path="/analyst/dashboards/custom/:id" element={<CustomDashboardPage />} />
-            <Route path="/connections" element={<ConnectionsPage />} />
-            <Route path="/connections/catalog" element={<SourceCatalogPage />} />
-            <Route path="/connections/destinations" element={<DestinationsPage />} />
-            <Route path="/connections/reverse-etl" element={<ReverseEtlPage />} />
-            <Route path="/connections/warehouses" element={<WarehousesPage />} />
-            <Route path="/connections/functions" element={<FunctionsPage />} />
-            <Route path="/connections/flow" element={<EtlFlowPage />} />
-            <Route path="/connections/pipelines" element={<PipelinesPage />} />
-            <Route path="/connections/pipelines/:id" element={<PipelineDetailPage />} />
-            <Route path="/connections/sources/new" element={<EtlPage />} />
-            <Route path="/connections/sources/:id" element={<SourceDetailPage />} />
-            <Route path="/unify" element={<UnifyPage />} />
-            <Route path="/unify/identity" element={<IdentityResolutionPage />} />
-            <Route path="/unify/traits" element={<TagsPage />} />
-            <Route path="/unify/sql-traits" element={<SqlTraitsPage />} />
-            <Route path="/unify/predictions" element={<PredictionsPage />} />
-            <Route path="/unify/sync" element={<ProfilesSyncPage />} />
-            <Route path="/unify/groups" element={<GroupsPage />} />
-            <Route path="/unify/profiles/:id" element={<ProfileDetailPage />} />
-            <Route path="/objects" element={<ObjectsHubPage />} />
-            <Route path="/objects/model" element={<ObjectModelPage />} />
-            <Route path="/objects/:key" element={<ObjectListPage />} />
-            <Route path="/objects/:key/:pk" element={<ObjectRecordDetailPage />} />
-            <Route path="/accounts" element={<AccountsPage />} />
-            <Route path="/accounts/-/merge-log" element={<AccountMergeLogPage />} />
-            <Route path="/accounts/:id" element={<AccountDetailPage />} />
-            <Route path="/engage" element={<EngagePage />} />
-            <Route path="/engage/audiences/new" element={<FilterPage />} />
-            <Route path="/engage/audiences/:id" element={<AudienceDetailPage />} />
-            <Route path="/engage/journeys" element={<JourneysPage />} />
-            <Route path="/engage/journeys/:id" element={<JourneyDetailPage />} />
-            <Route path="/engage/broadcasts" element={<BroadcastsPage />} />
-            <Route path="/engage/broadcasts/:id" element={<BroadcastDetailPage />} />
-            <Route path="/protocols" element={<TrackingPlansPage />} />
-            <Route path="/protocols/tracking-plans/:id" element={<TrackingPlanDetailPage />} />
-            <Route path="/protocols/violations" element={<ViolationsPage />} />
-            <Route path="/protocols/transformations" element={<TransformationsPage />} />
-            <Route path="/privacy" element={<PrivacyDataControlsPage />} />
-            <Route path="/privacy/consent" element={<PrivacyConsentPage />} />
-            <Route path="/privacy/deletion" element={<PrivacyDeletionPage />} />
-            <Route path="/monitor" element={<MonitorDeliveryPage />} />
-            <Route path="/monitor/alerts" element={<MonitorAlertsPage />} />
-            <Route path="/monitor/logs" element={<MonitorEventLogsPage />} />
-            <Route path="/settings" element={<SettingsGeneralPage />} />
-            <Route path="/settings/access" element={<AccessPage />} />
-            <Route path="/settings/tokens" element={<TokensPage />} />
-            <Route path="/settings/audit" element={<AuditPage />} />
-            <Route path="/settings/mcp" element={<SettingsMcpPage />} />
-            <Route path="/settings/tenants" element={<TenantsPage />} />
-            <Route path="/settings/tenants/:id" element={<TenantDetailPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
+          <Route path="/" element={<RequireAuth><ChatApp /></RequireAuth>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
