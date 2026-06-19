@@ -1,12 +1,13 @@
 import { useEffect, useState, type JSX } from "react";
 import {
   Workflow, RefreshCw, ExternalLink, CheckCircle2, XCircle, Loader2, Clock,
-  Database, Layers, Radio, Activity, CalendarClock, ChevronDown, Boxes,
+  Database, Layers, Radio, Activity, CalendarClock, ChevronDown, Boxes, LogIn, LogOut,
 } from "lucide-react";
 import { getSchedulerRuns, type DagRun, type SchedulerRuns } from "../../api/scheduler";
-import { getInfraStats, type InfraStats, type ObjectStat } from "../../api/platform";
+import { getInfraStats, type InfraStats, type ObjectStat, type AppStat } from "../../api/platform";
 import { useLang } from "../../context/LangContext";
 import { useTenant } from "../../context/TenantContext";
+import { useChatAction } from "../../context/ChatActionContext";
 
 const POLL_MS = 6000;
 
@@ -70,6 +71,31 @@ function ObjectCountList({ objects }: { objects: ObjectStat[] | undefined }) {
   );
 }
 
+// 上/下游应用明细。点击某个应用 → 进入对话，让 agent 引导用户填信息完成接入。
+function AppList({ apps, kind }: { apps: AppStat[] | undefined; kind: "upstream" | "downstream" }) {
+  const { tr } = useLang();
+  const { ask } = useChatAction();
+  if (apps === undefined) return <div className="px-1 py-3 text-center text-[11px] text-gray-400">{tr("加载中…", "Loading…")}</div>;
+  if (apps.length === 0) return <div className="px-1 py-3 text-center text-[11px] text-gray-400">{tr("暂无", "None")}</div>;
+  const direction = kind === "upstream" ? "数据源（上游）" : "目的地（下游）";
+  return (
+    <div className="max-h-56 space-y-0.5 overflow-y-auto">
+      {apps.map((a) => (
+        <button key={a.key} type="button"
+          onClick={() => ask(`我想接入「${a.label}」作为${direction}。请一步步引导我完成接入：先说明需要准备哪些信息/凭证，再逐项询问我，待我提供后给出接入配置并确认接入。`)}
+          className="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-brand-50">
+          <span className="flex-1 truncate text-[12px] text-gray-600">{a.label}</span>
+          {a.configured > 0 ? (
+            <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600">{tr("已接入", "Connected")} {a.configured}</span>
+          ) : (
+            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-400">{tr("去接入", "Connect")}</span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function TaskStatusPanel() {
   const { tr } = useLang();
   const { tenant } = useTenant();
@@ -96,15 +122,17 @@ export default function TaskStatusPanel() {
   const running = runs.filter((r) => (r.state || "").toLowerCase() === "running").length;
   const fmt = (n: number | null | undefined) => (n === null || n === undefined ? "—" : String(n));
 
-  // 固定顺序：数据源表 · Kafka 队列 · Flink 任务数 · Airflow 任务 · Doris 表 · 对象
-  type InfraItem = { key: string; icon: JSX.Element; label: string; val: string; names?: string[] | null; airflow?: boolean; objects?: ObjectStat[] };
+  // 固定顺序：上游应用 · 数据源表 · Kafka · Flink · Airflow · Doris · 对象 · 下游应用
+  type InfraItem = { key: string; icon: JSX.Element; label: string; val: string; names?: string[] | null; airflow?: boolean; objects?: ObjectStat[]; apps?: AppStat[] };
   const items: InfraItem[] = [
+    { key: "upstream", icon: <LogIn className="h-4 w-4 text-cyan-600" />, label: tr("上游应用", "Upstream apps"), val: fmt(stats?.upstream_apps), apps: stats?.upstream },
     { key: "mysql", icon: <Database className="h-4 w-4 text-sky-600" />, label: tr("数据源表", "Source tables"), val: fmt(stats?.mysql_tables), names: stats?.mysql_table_names },
     { key: "kafka", icon: <Radio className="h-4 w-4 text-amber-600" />, label: tr("Kafka 队列", "Kafka topics"), val: fmt(stats?.kafka_topics), names: stats?.kafka_topic_names },
     { key: "flink", icon: <Activity className="h-4 w-4 text-emerald-600" />, label: tr("Flink 任务数", "Flink jobs"), val: fmt(stats?.flink_jobs), names: stats?.flink_streams },
     { key: "airflow", icon: <CalendarClock className="h-4 w-4 text-brand-600" />, label: tr("Airflow 任务", "Airflow tasks"), val: fmt(data?.reachable ? runs.length : null), airflow: true },
     { key: "doris", icon: <Layers className="h-4 w-4 text-violet-600" />, label: tr("Doris 表", "Doris tables"), val: fmt(stats?.doris_tables), names: stats?.doris_table_names },
     { key: "objects", icon: <Boxes className="h-4 w-4 text-rose-600" />, label: tr("对象", "Objects"), val: fmt(stats?.object_types), objects: stats?.objects },
+    { key: "downstream", icon: <LogOut className="h-4 w-4 text-fuchsia-600" />, label: tr("下游应用", "Downstream apps"), val: fmt(stats?.downstream_apps), apps: stats?.downstream },
   ];
 
   return (
@@ -139,8 +167,10 @@ export default function TaskStatusPanel() {
                 <div className="border-t border-gray-100 bg-white px-2 py-1.5">
                   {it.airflow ? (
                     <AirflowDetail data={data} runs={runs} running={running} />
-                  ) : it.objects !== undefined || it.key === "objects" ? (
+                  ) : it.key === "objects" ? (
                     <ObjectCountList objects={it.objects} />
+                  ) : it.key === "upstream" || it.key === "downstream" ? (
+                    <AppList apps={it.apps} kind={it.key as "upstream" | "downstream"} />
                   ) : (
                     <NameList names={it.names} />
                   )}

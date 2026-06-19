@@ -9,6 +9,8 @@ import Markdown from "../assistant/Markdown";
 import ViewCard from "./cards/ViewCard";
 import TaskStatusPanel from "./TaskStatusPanel";
 import SettingsPanel from "./SettingsPanel";
+import WelcomeGreeting from "./WelcomeGreeting";
+import { ChatActionCtx } from "../../context/ChatActionContext";
 import { getMemory, addTokens } from "../../lib/prefs";
 import { useLang, type Lang } from "../../context/LangContext";
 import { useTenant } from "../../context/TenantContext";
@@ -171,6 +173,7 @@ export default function ChatApp() {
   const initial = (user?.name || user?.email || "A").charAt(0).toUpperCase();
 
   return (
+    <ChatActionCtx.Provider value={{ ask: (t) => { send(t); } }}>
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* 会话列表 */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-gray-200 bg-white md:flex">
@@ -255,11 +258,10 @@ export default function ChatApp() {
             {/* 新会话首页：清空页面，仅展示常见任务（无消息时）*/}
             {messages.length === 0 && !loading && (
               <div className="flex min-h-[60vh] flex-col items-center justify-center py-8">
-                <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
                   <Sparkles className="h-6 w-6" />
                 </div>
-                <h2 className="mt-2 text-xl font-bold tracking-tight text-gray-900">{tr("有什么可以帮你？", "How can I help?")}</h2>
-                <p className="mt-1 text-sm text-gray-400">{tr("从常见任务开始，或直接在下方输入", "Start from a common task, or just type below")}</p>
+                <WelcomeGreeting name={user?.name || user?.email || tr("朋友", "friend")} />
                 <div className="mt-6 grid w-full max-w-xl grid-cols-1 gap-2.5 sm:grid-cols-2">
                   {COMMON_TASKS.map((t) => (
                     <button key={t.title} type="button" onClick={() => send(t.prompt)}
@@ -369,5 +371,6 @@ export default function ChatApp() {
       {/* 设置弹层（由左侧菜单「管理员」下方的按钮触发）*/}
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
+    </ChatActionCtx.Provider>
   );
 }

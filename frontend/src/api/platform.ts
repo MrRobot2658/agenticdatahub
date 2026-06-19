@@ -4,6 +4,7 @@ import { http } from "./client";
 
 // ── 数据底座统计（右侧概览）────────────────────────────────────────────────
 export interface ObjectStat { key: string; label: string; table: string; count: number | null }
+export interface AppStat { key: string; label: string; configured: number }
 export interface InfraStats {
   mysql_tables: number;
   mysql_table_names: string[];
@@ -15,6 +16,10 @@ export interface InfraStats {
   flink_streams: string[] | null;
   object_types: number;               // 业务对象种类数
   objects: ObjectStat[];              // 各对象记录数（按租户）
+  upstream_apps: number;              // 上游数据源应用数
+  upstream: AppStat[];                // 微信/企业微信/抖音…
+  downstream_apps: number;            // 下游应用数
+  downstream: AppStat[];              // BI / Webhook / Reverse ETL…
 }
 export async function getInfraStats(tenantId?: number): Promise<InfraStats> {
   const { data } = await http.get(`/platform/infra-stats`, { params: tenantId ? { tenant_id: tenantId } : {} });

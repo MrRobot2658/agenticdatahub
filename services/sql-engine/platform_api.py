@@ -29,6 +29,23 @@ OBJECT_LABELS = {
     "product": "产品", "store": "门店", "order": "订单",
 }
 
+# 上下游应用目录（右侧「上游/下游应用」明细用）。key 与 connections_sources.source_type /
+# connections_destinations.dest_type 对齐，用于把真实已接入连接数合并进来。
+UPSTREAM_APPS = [
+    {"key": "wechat_mp", "label": "微信公众号"},
+    {"key": "wework", "label": "企业微信"},
+    {"key": "wechat_channels", "label": "微信视频号"},
+    {"key": "xiaohongshu", "label": "小红书"},
+    {"key": "douyin", "label": "抖音"},
+    {"key": "web", "label": "官网埋点"},
+]
+DOWNSTREAM_APPS = [
+    {"key": "bi", "label": "BI 看板"},
+    {"key": "webhook", "label": "Webhook"},
+    {"key": "reverse_etl", "label": "Reverse ETL"},
+    {"key": "ads", "label": "广告平台"},
+]
+
 
 def _flink_streams() -> list[str] | None:
     """模拟 Flink 任务：id-mapping 服务消费的 Kafka 流（每条流 = 一个 Flink Job）。
@@ -143,6 +160,25 @@ class PlatformService:
                 return str(next(iter(row.values())))
             return str(row[0])
 
+        def _type_counts(cur, table: str, type_col: str) -> dict[str, int]:
+            """按类型聚合已接入连接数；表不存在/为空时返回空。"""
+            out: dict[str, int] = {}
+            try:
+                where = "WHERE tenant_id=%s" if tenant_id is not None else ""
+                args = (tenant_id,) if tenant_id is not None else ()
+                cur.execute(f"SELECT {type_col} AS t, COUNT(*) AS c FROM `{table}` {where} GROUP BY {type_col}", args)
+                for r in cur.fetchall():
+                    t = r["t"] if isinstance(r, dict) else r[0]
+                    c = r["c"] if isinstance(r, dict) else r[1]
+                    if t is not None:
+                        out[str(t)] = int(c)
+            except Exception:
+                pass
+            return out
+
+        def _apps(catalog: list[dict], counts: dict[str, int]) -> list[dict]:
+            return [{**a, "configured": counts.get(a["key"], 0)} for a in catalog]
+
         objects: list[dict[str, Any]] = []
         with self._conn() as conn:
             with conn.cursor() as cur:
@@ -152,6 +188,8 @@ class PlatformService:
                     (db,),
                 )
                 mysql_names = [_first(r) for r in cur.fetchall()]
+                up_counts = _type_counts(cur, "connections_sources", "source_type")
+                down_counts = _type_counts(cur, "connections_destinations", "dest_type")
                 # 业务对象（OBJECT_REGISTRY）逐表计数
                 for key, spec in OBJECT_REGISTRY.items():
                     table = spec["table"]
@@ -179,6 +217,10 @@ class PlatformService:
             "flink_streams": flink,
             "object_types": len(objects),
             "objects": objects,
+            "upstream_apps": len(UPSTREAM_APPS),
+            "upstream": _apps(UPSTREAM_APPS, up_counts),
+            "downstream_apps": len(DOWNSTREAM_APPS),
+            "downstream": _apps(DOWNSTREAM_APPS, down_counts),
         }
 
     # ── 内部工具 ─────────────────────────────────────────────────────────
