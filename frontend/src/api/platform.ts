@@ -2,6 +2,18 @@
 // 独立文件，避免与 client.ts 并发冲突；复用同一 axios 实例（baseURL /api）。
 import { http } from "./client";
 
+// ── 数据底座统计（右侧概览）────────────────────────────────────────────────
+export interface InfraStats {
+  mysql_tables: number;
+  doris_tables: number;
+  kafka_topics: number | null;   // Kafka 不可达时为 null
+  flink_jobs: number | null;     // id-mapping(模拟 Flink) 不可达时为 null
+}
+export async function getInfraStats(): Promise<InfraStats> {
+  const { data } = await http.get(`/platform/infra-stats`);
+  return data as InfraStats;
+}
+
 // ── 配置域常量（与后端 platform_api.CONFIG_DOMAINS 保持一致）───────────────
 export const CONFIG_DOMAINS = [
   "基础",

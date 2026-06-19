@@ -244,6 +244,9 @@ services:
       OLAP_DATABASE: agenticdatahub
       SCALE_TIER: ${SCALE:-dev}
       DORIS_BE_SHARDS: ${DORIS_BE_SHARDS:-1}
+      # 数据底座统计：实时查 Kafka topic 数（容器内监听地址）+ Flink(id-mapping) 任务数
+      KAFKA_BOOTSTRAP: kafka:29092
+      ID_MAPPING_URL: http://id-mapping:8000
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_API_BASE: ${DEEPSEEK_API_BASE:-https://api.deepseek.com}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}

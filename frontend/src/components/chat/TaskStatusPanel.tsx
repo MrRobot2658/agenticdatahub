@@ -1,7 +1,43 @@
 import { useEffect, useState } from "react";
-import { Workflow, RefreshCw, ExternalLink, CheckCircle2, XCircle, Loader2, Clock } from "lucide-react";
+import { Workflow, RefreshCw, ExternalLink, CheckCircle2, XCircle, Loader2, Clock, Database, Layers, Radio, Activity, CalendarClock } from "lucide-react";
 import { getSchedulerRuns, type DagRun, type SchedulerRuns } from "../../api/scheduler";
+import { getInfraStats, type InfraStats } from "../../api/platform";
 import { useLang } from "../../context/LangContext";
+
+// 数据底座统计：顺序固定为 数据源表 · kafka队列 · flink任务数 · airflow任务 · doris表
+function InfraStatsBlock({ airflowCount }: { airflowCount: number | null }) {
+  const { tr } = useLang();
+  const [s, setS] = useState<InfraStats | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => getInfraStats().then((d) => { if (alive) setS(d); }).catch(() => {});
+    load();
+    const t = setInterval(load, 30000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+  const fmt = (n: number | null | undefined) => (n === null || n === undefined ? "—" : String(n));
+  const rows = [
+    { icon: <Database className="h-4 w-4 text-sky-600" />, label: tr("数据源表", "Source tables"), val: fmt(s?.mysql_tables) },
+    { icon: <Radio className="h-4 w-4 text-amber-600" />, label: tr("Kafka 队列", "Kafka topics"), val: fmt(s?.kafka_topics) },
+    { icon: <Activity className="h-4 w-4 text-emerald-600" />, label: tr("Flink 任务数", "Flink jobs"), val: fmt(s?.flink_jobs) },
+    { icon: <CalendarClock className="h-4 w-4 text-brand-600" />, label: tr("Airflow 任务", "Airflow tasks"), val: fmt(airflowCount) },
+    { icon: <Layers className="h-4 w-4 text-violet-600" />, label: tr("Doris 表", "Doris tables"), val: fmt(s?.doris_tables) },
+  ];
+  return (
+    <div className="border-b border-gray-200 px-3 py-3">
+      <div className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">{tr("数据底座", "Data Foundation")}</div>
+      <div className="space-y-1">
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50/60 px-2.5 py-1.5">
+            {r.icon}
+            <span className="flex-1 truncate text-[12px] text-gray-600">{r.label}</span>
+            <span className="text-[15px] font-bold tabular-nums text-gray-900">{r.val}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // 右侧任务状态面板：轮询 Airflow DAG 运行状态（全局），展示最近若干次运行。
 const POLL_MS = 6000;
@@ -41,6 +77,7 @@ export default function TaskStatusPanel() {
 
   return (
     <aside className="hidden w-72 shrink-0 flex-col border-l border-gray-200 bg-white xl:flex">
+      <InfraStatsBlock airflowCount={data?.reachable ? runs.length : null} />
       <div className="flex items-center gap-2 border-b border-gray-200 px-4 py-3">
         <Workflow className="h-4 w-4 text-brand-600" />
         <div className="flex-1">

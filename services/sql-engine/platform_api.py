@@ -12,6 +12,7 @@
 """
 
 import json
+import os
 from contextlib import contextmanager
 from typing import Any
 
@@ -20,6 +21,43 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from executor import MysqlOlapExecutor
+
+
+def _flink_job_count() -> int | None:
+    """模拟 Flink 任务数：id-mapping 服务消费的 Kafka 流（每条流 = 一个 Flink Job）。
+    id-mapping 不可达时返回 None。"""
+    url = os.getenv("ID_MAPPING_URL", "http://id-mapping:8000")
+    try:
+        import httpx
+
+        r = httpx.get(f"{url}/health", timeout=3.0)
+        topics = r.json().get("topics") or []
+        return len(topics)
+    except Exception:
+        return None
+
+
+def _kafka_topic_count() -> int | None:
+    """实时统计 Kafka 业务 topic 数（排除 __ 开头的内部 topic）。
+    Kafka 不可达或缺少 kafka-python 时返回 None，由前端显示「—」。
+    """
+    bootstrap = os.getenv("KAFKA_BOOTSTRAP", "kafka:29092")
+    try:
+        from kafka import KafkaAdminClient  # 延迟导入，避免 Kafka 故障拖累其它接口
+
+        admin = KafkaAdminClient(
+            bootstrap_servers=bootstrap,
+            request_timeout_ms=3000,
+            api_version_auto_timeout_ms=3000,
+        )
+        try:
+            topics = admin.list_topics()
+        finally:
+            admin.close()
+        return len([t for t in topics if not t.startswith("__")])
+    except Exception:
+        return None
+
 
 # ── 配置域常量（与 sql/migrate_modules.sql 中 config_domain 注释一致）─────────
 CONFIG_DOMAINS = [
@@ -85,6 +123,38 @@ class PlatformService:
             yield conn
         finally:
             conn.close()
+
+    # ── 数据底座统计（右侧概览）────────────────────────────────────────────
+    def infra_stats(self) -> dict[str, Any]:
+        """MySQL 表数 / Doris(模拟) 表数 / Kafka topic 数，供前端右侧概览展示。"""
+        db = self.config.get("database", "agenticdatahub")
+
+        def _scalar(row: Any) -> int:
+            # 兼容 DictCursor / 普通游标
+            if isinstance(row, dict):
+                return int(next(iter(row.values())))
+            return int(row[0])
+
+        mysql_tables = doris_tables = 0
+        with self._conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) AS c FROM information_schema.tables WHERE table_schema=%s",
+                    (db,),
+                )
+                mysql_tables = _scalar(cur.fetchone())
+                cur.execute(
+                    "SELECT COUNT(*) AS c FROM information_schema.tables "
+                    "WHERE table_schema=%s AND table_name LIKE 'doris\\_%%'",
+                    (db,),
+                )
+                doris_tables = _scalar(cur.fetchone())
+        return {
+            "mysql_tables": mysql_tables,
+            "doris_tables": doris_tables,
+            "kafka_topics": _kafka_topic_count(),
+            "flink_jobs": _flink_job_count(),
+        }
 
     # ── 内部工具 ─────────────────────────────────────────────────────────
     @staticmethod
@@ -458,6 +528,11 @@ class PlatformService:
 
 router = APIRouter(prefix="/platform", tags=["平台管理"])
 _service = PlatformService()
+
+
+@router.get("/infra-stats", summary="数据底座统计（MySQL 表 / Doris 表 / Kafka topic）")
+def infra_stats():
+    return _service.infra_stats()
 
 
 @router.get("/tenants", summary="租户列表（搜索/筛选）")
