@@ -23,8 +23,8 @@ from pydantic import BaseModel, Field
 from executor import MysqlOlapExecutor
 
 
-def _flink_job_count() -> int | None:
-    """模拟 Flink 任务数：id-mapping 服务消费的 Kafka 流（每条流 = 一个 Flink Job）。
+def _flink_streams() -> list[str] | None:
+    """模拟 Flink 任务：id-mapping 服务消费的 Kafka 流（每条流 = 一个 Flink Job）。
     id-mapping 不可达时返回 None。"""
     url = os.getenv("ID_MAPPING_URL", "http://id-mapping:8000")
     try:
@@ -32,13 +32,13 @@ def _flink_job_count() -> int | None:
 
         r = httpx.get(f"{url}/health", timeout=3.0)
         topics = r.json().get("topics") or []
-        return len(topics)
+        return sorted(str(t) for t in topics)
     except Exception:
         return None
 
 
-def _kafka_topic_count() -> int | None:
-    """实时统计 Kafka 业务 topic 数（排除 __ 开头的内部 topic）。
+def _kafka_topics() -> list[str] | None:
+    """实时列出 Kafka 业务 topic（排除 __ 开头的内部 topic）。
     Kafka 不可达或缺少 kafka-python 时返回 None，由前端显示「—」。
     """
     bootstrap = os.getenv("KAFKA_BOOTSTRAP", "kafka:29092")
@@ -54,7 +54,7 @@ def _kafka_topic_count() -> int | None:
             topics = admin.list_topics()
         finally:
             admin.close()
-        return len([t for t in topics if not t.startswith("__")])
+        return sorted(t for t in topics if not t.startswith("__"))
     except Exception:
         return None
 
@@ -124,36 +124,37 @@ class PlatformService:
         finally:
             conn.close()
 
-    # ── 数据底座统计（右侧概览）────────────────────────────────────────────
+    # ── 数据底座统计（右侧概览，含明细名单供点击展开）──────────────────────
     def infra_stats(self) -> dict[str, Any]:
-        """MySQL 表数 / Doris(模拟) 表数 / Kafka topic 数，供前端右侧概览展示。"""
+        """各中间件计数 + 明细名单（表名/topic/流），供前端右侧概览点击查看详情。"""
         db = self.config.get("database", "agenticdatahub")
 
-        def _scalar(row: Any) -> int:
+        def _first(row: Any) -> str:
             # 兼容 DictCursor / 普通游标
             if isinstance(row, dict):
-                return int(next(iter(row.values())))
-            return int(row[0])
+                return str(next(iter(row.values())))
+            return str(row[0])
 
-        mysql_tables = doris_tables = 0
         with self._conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT COUNT(*) AS c FROM information_schema.tables WHERE table_schema=%s",
+                    "SELECT table_name AS name FROM information_schema.tables "
+                    "WHERE table_schema=%s ORDER BY table_name",
                     (db,),
                 )
-                mysql_tables = _scalar(cur.fetchone())
-                cur.execute(
-                    "SELECT COUNT(*) AS c FROM information_schema.tables "
-                    "WHERE table_schema=%s AND table_name LIKE 'doris\\_%%'",
-                    (db,),
-                )
-                doris_tables = _scalar(cur.fetchone())
+                mysql_names = [_first(r) for r in cur.fetchall()]
+        doris_names = [n for n in mysql_names if n.lower().startswith("doris_")]
+        kafka = _kafka_topics()
+        flink = _flink_streams()
         return {
-            "mysql_tables": mysql_tables,
-            "doris_tables": doris_tables,
-            "kafka_topics": _kafka_topic_count(),
-            "flink_jobs": _flink_job_count(),
+            "mysql_tables": len(mysql_names),
+            "mysql_table_names": mysql_names,
+            "doris_tables": len(doris_names),
+            "doris_table_names": doris_names,
+            "kafka_topics": (len(kafka) if kafka is not None else None),
+            "kafka_topic_names": kafka,
+            "flink_jobs": (len(flink) if flink is not None else None),
+            "flink_streams": flink,
         }
 
     # ── 内部工具 ─────────────────────────────────────────────────────────

@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Sparkles, Send, Plus, Trash2, Paperclip, X, ChevronDown, LogOut, Bot, MessageCircleQuestion,
+  UserSearch, Filter, BarChart3, MapPin, type LucideIcon,
 } from "lucide-react";
 import { Spinner } from "../ui";
 import Markdown from "../assistant/Markdown";
 import ViewCard from "./cards/ViewCard";
 import TaskStatusPanel from "./TaskStatusPanel";
-import Dashboard from "../../pages/Dashboard";
 import { useLang, type Lang } from "../../context/LangContext";
 import { useTenant } from "../../context/TenantContext";
 import { useAuth } from "../../context/AuthContext";
@@ -29,11 +29,14 @@ interface UiMessage {
 }
 
 const newId = () => (crypto?.randomUUID?.() ? `c_${crypto.randomUUID().slice(0, 8)}` : `c_${Math.random().toString(36).slice(2, 10)}`);
-const STARTERS = [
-  "看 OneID 100002 的用户画像",
-  "找近 30 天在抖音点过广告、且下过单的高价值用户",
-  "按渠道统计用户分布做个柱状图",
-  "列出北京的线索",
+
+// 常见任务：新会话首页展示，点击即作为提问发送
+interface CommonTask { icon: LucideIcon; title: string; titleEn: string; prompt: string }
+const COMMON_TASKS: CommonTask[] = [
+  { icon: UserSearch, title: "查看用户画像", titleEn: "Inspect a profile", prompt: "看 OneID 100002 的用户画像" },
+  { icon: Filter, title: "圈选高价值人群", titleEn: "Build an audience", prompt: "找近 30 天在抖音点过广告、且下过单的高价值用户" },
+  { icon: BarChart3, title: "渠道分布图表", titleEn: "Channel breakdown chart", prompt: "按渠道统计用户分布做个柱状图" },
+  { icon: MapPin, title: "查询线索", titleEn: "Query leads", prompt: "列出北京的线索" },
 ];
 const TEXT_ACCEPT = ".csv,.tsv,.txt,.json,.md,.log,.yaml,.yml";
 
@@ -71,6 +74,7 @@ export default function ChatApp() {
     setMessages([]);
     setAttachments([]);
     setInput("");
+    if (loc.pathname !== "/") navigate("/");   // 清空页面：关闭已打开的功能页，回到常见任务首页
     setTimeout(() => inputRef.current?.focus(), 30);
   }
 
@@ -252,18 +256,27 @@ export default function ChatApp() {
               </div>
             )}
 
-            {/* 欢迎页：首页 Dashboard + 起手式（未开页面且无消息时） */}
+            {/* 新会话首页：清空页面，仅展示常见任务（未开页面且无消息时）*/}
             {!onPage && messages.length === 0 && !loading && (
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 text-sm font-medium text-gray-500"><Sparkles className="h-4 w-4 text-brand-500" /> {tr("试试：", "Try:")}</span>
-                  {STARTERS.map((s) => (
-                    <button key={s} type="button" onClick={() => send(s)}
-                      className="rounded-full border border-gray-200 px-2.5 py-1 text-[12px] text-gray-600 hover:border-brand-300 hover:bg-brand-50/60">{s}</button>
-                  ))}
+              <div className="flex min-h-[60vh] flex-col items-center justify-center py-8">
+                <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
+                  <Sparkles className="h-6 w-6" />
                 </div>
-                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-                  <EmbeddedCtx.Provider value={true}><Dashboard /></EmbeddedCtx.Provider>
+                <h2 className="mt-2 text-xl font-bold tracking-tight text-gray-900">{tr("有什么可以帮你？", "How can I help?")}</h2>
+                <p className="mt-1 text-sm text-gray-400">{tr("从常见任务开始，或直接在下方输入", "Start from a common task, or just type below")}</p>
+                <div className="mt-6 grid w-full max-w-xl grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {COMMON_TASKS.map((t) => (
+                    <button key={t.title} type="button" onClick={() => send(t.prompt)}
+                      className="group flex items-start gap-3 rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-left transition-colors hover:border-brand-300 hover:bg-brand-50/40">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 group-hover:bg-brand-100 group-hover:text-brand-600">
+                        <t.icon className="h-[18px] w-[18px]" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-semibold text-gray-900">{tr(t.title, t.titleEn)}</span>
+                        <span className="mt-0.5 block truncate text-[12px] text-gray-400">{t.prompt}</span>
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}

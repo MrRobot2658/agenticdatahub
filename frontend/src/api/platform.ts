@@ -5,9 +5,13 @@ import { http } from "./client";
 // ── 数据底座统计（右侧概览）────────────────────────────────────────────────
 export interface InfraStats {
   mysql_tables: number;
+  mysql_table_names: string[];
   doris_tables: number;
-  kafka_topics: number | null;   // Kafka 不可达时为 null
-  flink_jobs: number | null;     // id-mapping(模拟 Flink) 不可达时为 null
+  doris_table_names: string[];
+  kafka_topics: number | null;        // Kafka 不可达时为 null
+  kafka_topic_names: string[] | null;
+  flink_jobs: number | null;          // id-mapping(模拟 Flink) 不可达时为 null
+  flink_streams: string[] | null;
 }
 export async function getInfraStats(): Promise<InfraStats> {
   const { data } = await http.get(`/platform/infra-stats`);
