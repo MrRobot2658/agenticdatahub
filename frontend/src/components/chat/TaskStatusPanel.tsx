@@ -1,11 +1,12 @@
 import { useEffect, useState, type JSX } from "react";
 import {
   Workflow, RefreshCw, ExternalLink, CheckCircle2, XCircle, Loader2, Clock,
-  Database, Layers, Radio, Activity, CalendarClock, ChevronDown,
+  Database, Layers, Radio, Activity, CalendarClock, ChevronDown, Boxes,
 } from "lucide-react";
 import { getSchedulerRuns, type DagRun, type SchedulerRuns } from "../../api/scheduler";
-import { getInfraStats, type InfraStats } from "../../api/platform";
+import { getInfraStats, type InfraStats, type ObjectStat } from "../../api/platform";
 import { useLang } from "../../context/LangContext";
+import { useTenant } from "../../context/TenantContext";
 
 const POLL_MS = 6000;
 
@@ -52,8 +53,26 @@ function NameList({ names }: { names: string[] | null | undefined }) {
   );
 }
 
+// 业务对象记录数明细（label + count）
+function ObjectCountList({ objects }: { objects: ObjectStat[] | undefined }) {
+  const { tr } = useLang();
+  if (objects === undefined) return <div className="px-1 py-3 text-center text-[11px] text-gray-400">{tr("加载中…", "Loading…")}</div>;
+  if (objects.length === 0) return <div className="px-1 py-3 text-center text-[11px] text-gray-400">{tr("暂无", "None")}</div>;
+  return (
+    <div className="max-h-56 space-y-0.5 overflow-y-auto">
+      {objects.map((o) => (
+        <div key={o.key} className="flex items-center gap-2 rounded px-2 py-1 hover:bg-gray-50">
+          <span className="flex-1 truncate text-[12px] text-gray-600">{o.label}<span className="ml-1 font-mono text-[10px] text-gray-300">{o.key}</span></span>
+          <span className="font-mono text-[12px] font-semibold tabular-nums text-gray-900">{o.count === null ? "—" : o.count.toLocaleString()}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function TaskStatusPanel() {
   const { tr } = useLang();
+  const { tenant } = useTenant();
   const [data, setData] = useState<SchedulerRuns | null>(null);
   const [stats, setStats] = useState<InfraStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,27 +83,28 @@ export default function TaskStatusPanel() {
     try { setData(await getSchedulerRuns(20)); } catch (e: any) {
       setData({ engine: "airflow", reachable: false, ui_url: "", dag_id: "", runs: [], error: String(e) });
     } finally { setLoading(false); }
-    getInfraStats().then(setStats).catch(() => {});
+    getInfraStats(tenant).then(setStats).catch(() => {});
   }
 
   useEffect(() => {
     load();
     const t = setInterval(load, POLL_MS);
     return () => clearInterval(t);
-  }, []);
+  }, [tenant]);
 
   const runs = data?.runs ?? [];
   const running = runs.filter((r) => (r.state || "").toLowerCase() === "running").length;
   const fmt = (n: number | null | undefined) => (n === null || n === undefined ? "—" : String(n));
 
-  // 固定顺序：数据源表 · Kafka 队列 · Flink 任务数 · Airflow 任务 · Doris 表
-  type InfraItem = { key: string; icon: JSX.Element; label: string; val: string; names?: string[] | null; airflow?: boolean };
+  // 固定顺序：数据源表 · Kafka 队列 · Flink 任务数 · Airflow 任务 · Doris 表 · 对象
+  type InfraItem = { key: string; icon: JSX.Element; label: string; val: string; names?: string[] | null; airflow?: boolean; objects?: ObjectStat[] };
   const items: InfraItem[] = [
     { key: "mysql", icon: <Database className="h-4 w-4 text-sky-600" />, label: tr("数据源表", "Source tables"), val: fmt(stats?.mysql_tables), names: stats?.mysql_table_names },
     { key: "kafka", icon: <Radio className="h-4 w-4 text-amber-600" />, label: tr("Kafka 队列", "Kafka topics"), val: fmt(stats?.kafka_topics), names: stats?.kafka_topic_names },
     { key: "flink", icon: <Activity className="h-4 w-4 text-emerald-600" />, label: tr("Flink 任务数", "Flink jobs"), val: fmt(stats?.flink_jobs), names: stats?.flink_streams },
     { key: "airflow", icon: <CalendarClock className="h-4 w-4 text-brand-600" />, label: tr("Airflow 任务", "Airflow tasks"), val: fmt(data?.reachable ? runs.length : null), airflow: true },
     { key: "doris", icon: <Layers className="h-4 w-4 text-violet-600" />, label: tr("Doris 表", "Doris tables"), val: fmt(stats?.doris_tables), names: stats?.doris_table_names },
+    { key: "objects", icon: <Boxes className="h-4 w-4 text-rose-600" />, label: tr("对象", "Objects"), val: fmt(stats?.object_types), objects: stats?.objects },
   ];
 
   return (
@@ -119,6 +139,8 @@ export default function TaskStatusPanel() {
                 <div className="border-t border-gray-100 bg-white px-2 py-1.5">
                   {it.airflow ? (
                     <AirflowDetail data={data} runs={runs} running={running} />
+                  ) : it.objects !== undefined || it.key === "objects" ? (
+                    <ObjectCountList objects={it.objects} />
                   ) : (
                     <NameList names={it.names} />
                   )}

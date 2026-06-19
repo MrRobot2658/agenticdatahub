@@ -16,6 +16,7 @@ import pymysql
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from executor import MysqlOlapExecutor
+from semantic import SemanticService
 
 CHART_TYPES = ("bar", "line", "pie", "area")
 
@@ -41,6 +42,8 @@ class AnalystService:
     def __init__(self, executor: MysqlOlapExecutor | None = None):
         self._executor = executor or MysqlOlapExecutor()
         self.config = self._executor.config
+        # KPI 取值改由语义层指标目录统一计算（单一真相），共享同一 executor
+        self._semantic = SemanticService(self._executor)
 
     @contextmanager
     def _conn(self):
@@ -100,27 +103,10 @@ class AnalystService:
 
     # ── KPI（看板用）─────────────────────────────────────────────────────────
     def kpis(self, tenant_id: int) -> dict:
-        def one(sql: str) -> float:
-            with self._conn() as conn, conn.cursor() as cur:
-                cur.execute(sql, (tenant_id,))
-                v = cur.fetchone()
-                return float(list(v.values())[0] or 0) if v else 0.0
-        users = int(one("SELECT COUNT(*) FROM doris_user_wide WHERE tenant_id=%s"))
-        accounts = int(one("SELECT COUNT(*) FROM object_account WHERE tenant_id=%s"))
-        leads = int(one("SELECT COUNT(*) FROM object_lead WHERE tenant_id=%s"))
-        leads_q = int(one("SELECT COUNT(*) FROM object_lead WHERE tenant_id=%s AND stage='qualified'"))
-        products = int(one("SELECT COUNT(*) FROM object_product WHERE tenant_id=%s"))
-        stores = int(one("SELECT COUNT(*) FROM object_store WHERE tenant_id=%s"))
-        orders = int(one("SELECT COUNT(*) FROM object_order WHERE tenant_id=%s"))
-        orders_paid = int(one("SELECT COUNT(*) FROM object_order WHERE tenant_id=%s AND status='paid'"))
-        gmv = one("SELECT COALESCE(SUM(amount),0) FROM object_order WHERE tenant_id=%s AND status='paid'")
-        return {
-            "users": users, "accounts": accounts, "leads": leads, "leads_qualified": leads_q,
-            "products": products, "stores": stores, "orders": orders, "orders_paid": orders_paid,
-            "gmv": round(gmv, 2), "aov": round(gmv / orders_paid, 2) if orders_paid else 0.0,
-            "lead_qualified_rate": round(leads_q / leads, 4) if leads else 0.0,
-            "order_paid_rate": round(orders_paid / orders, 4) if orders else 0.0,
-        }
+        # 由语义层指标目录计算，键名与原响应保持一致（向后兼容前端看板）
+        keys = ["users", "accounts", "leads", "leads_qualified", "products", "stores",
+                "orders", "orders_paid", "gmv", "aov", "lead_qualified_rate", "order_paid_rate"]
+        return self._semantic.compute_values(tenant_id, keys)
 
     # ── 图表 CRUD ────────────────────────────────────────────────────────────
     def list_charts(self, tenant_id: int) -> list[dict]:

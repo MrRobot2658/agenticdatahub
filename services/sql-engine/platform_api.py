@@ -21,6 +21,13 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from executor import MysqlOlapExecutor
+from objects import OBJECT_REGISTRY
+
+# 业务对象中文标签（右侧「对象」明细用）
+OBJECT_LABELS = {
+    "user": "用户", "lead": "线索", "account": "客户",
+    "product": "产品", "store": "门店", "order": "订单",
+}
 
 
 def _flink_streams() -> list[str] | None:
@@ -125,8 +132,9 @@ class PlatformService:
             conn.close()
 
     # ── 数据底座统计（右侧概览，含明细名单供点击展开）──────────────────────
-    def infra_stats(self) -> dict[str, Any]:
-        """各中间件计数 + 明细名单（表名/topic/流），供前端右侧概览点击查看详情。"""
+    def infra_stats(self, tenant_id: int | None = None) -> dict[str, Any]:
+        """各中间件计数 + 明细名单（表名/topic/流/业务对象），供前端右侧概览点击查看详情。
+        业务对象记录数按 tenant_id 过滤（不传则全租户）。"""
         db = self.config.get("database", "agenticdatahub")
 
         def _first(row: Any) -> str:
@@ -135,6 +143,7 @@ class PlatformService:
                 return str(next(iter(row.values())))
             return str(row[0])
 
+        objects: list[dict[str, Any]] = []
         with self._conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -143,6 +152,19 @@ class PlatformService:
                     (db,),
                 )
                 mysql_names = [_first(r) for r in cur.fetchall()]
+                # 业务对象（OBJECT_REGISTRY）逐表计数
+                for key, spec in OBJECT_REGISTRY.items():
+                    table = spec["table"]
+                    cnt: int | None
+                    try:
+                        if tenant_id is not None:
+                            cur.execute(f"SELECT COUNT(*) AS c FROM `{table}` WHERE tenant_id=%s", (tenant_id,))
+                        else:
+                            cur.execute(f"SELECT COUNT(*) AS c FROM `{table}`")
+                        cnt = int(_first(cur.fetchone()))
+                    except Exception:
+                        cnt = None
+                    objects.append({"key": key, "label": OBJECT_LABELS.get(key, key), "table": table, "count": cnt})
         doris_names = [n for n in mysql_names if n.lower().startswith("doris_")]
         kafka = _kafka_topics()
         flink = _flink_streams()
@@ -155,6 +177,8 @@ class PlatformService:
             "kafka_topic_names": kafka,
             "flink_jobs": (len(flink) if flink is not None else None),
             "flink_streams": flink,
+            "object_types": len(objects),
+            "objects": objects,
         }
 
     # ── 内部工具 ─────────────────────────────────────────────────────────
@@ -531,9 +555,9 @@ router = APIRouter(prefix="/platform", tags=["平台管理"])
 _service = PlatformService()
 
 
-@router.get("/infra-stats", summary="数据底座统计（MySQL 表 / Doris 表 / Kafka topic）")
-def infra_stats():
-    return _service.infra_stats()
+@router.get("/infra-stats", summary="数据底座统计（MySQL 表 / Doris 表 / Kafka topic / Flink / 对象）")
+def infra_stats(tenant_id: int | None = None):
+    return _service.infra_stats(tenant_id)
 
 
 @router.get("/tenants", summary="租户列表（搜索/筛选）")

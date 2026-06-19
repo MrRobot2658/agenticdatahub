@@ -3,6 +3,7 @@
 import { http } from "./client";
 
 // ── 数据底座统计（右侧概览）────────────────────────────────────────────────
+export interface ObjectStat { key: string; label: string; table: string; count: number | null }
 export interface InfraStats {
   mysql_tables: number;
   mysql_table_names: string[];
@@ -12,9 +13,11 @@ export interface InfraStats {
   kafka_topic_names: string[] | null;
   flink_jobs: number | null;          // id-mapping(模拟 Flink) 不可达时为 null
   flink_streams: string[] | null;
+  object_types: number;               // 业务对象种类数
+  objects: ObjectStat[];              // 各对象记录数（按租户）
 }
-export async function getInfraStats(): Promise<InfraStats> {
-  const { data } = await http.get(`/platform/infra-stats`);
+export async function getInfraStats(tenantId?: number): Promise<InfraStats> {
+  const { data } = await http.get(`/platform/infra-stats`, { params: tenantId ? { tenant_id: tenantId } : {} });
   return data as InfraStats;
 }
 

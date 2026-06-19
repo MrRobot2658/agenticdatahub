@@ -47,6 +47,7 @@ from schemas import (
 
 # ── 功能模块 Router（00~09）─────────────────────────────────────────────────
 from platform_api import router as platform_router
+from semantic_api import router as semantic_router
 from connections_api import router as connections_router
 from unify_api import router as unify_router
 from objects_api import router as objects_admin_router
@@ -501,6 +502,7 @@ def agent_confirm(body: AgentConfirmRequest):
 
 # ── 挂载功能模块 Router（在内联端点之后注册，内联端点保持优先）────────────────
 app.include_router(platform_router)
+app.include_router(semantic_router)
 app.include_router(connections_router)
 app.include_router(unify_router)
 app.include_router(objects_admin_router)
