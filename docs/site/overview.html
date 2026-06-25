@@ -53,13 +53,77 @@
     </div>
     <section>
       <h3>总览看板 Overview</h3>
-      <p>控制台首页。复用「分析」的 KPI 与可下钻图表组件，一屏看清全局。</p>
+      <p class="lead">控制台首页。复用「分析」的 KPI 与可下钻图表组件，一屏看清全局；下方「全功能总览」串起平台的每一个能力。</p>
       <div class="cards">
         <div class="card"><h5><span class="ico">📇</span>核心 KPI 卡</h5><p>用户 / 客户 / 线索 / 订单数、GMV、线索转化率。</p></div>
         <div class="card"><h5><span class="ico">📊</span>关键分布图表</h5><p>各对象量、订单状态、线索阶段、客户行业，<b>点击可下钻明细</b>。</p></div>
         <div class="card"><h5><span class="ico">⚡</span>快捷入口</h5><p>创建受众 / 接入数据源，一键直达高频操作。</p></div>
       </div>
       <p>路由：<code>/</code></p>
+    </section>
+
+    <section>
+      <h3>全功能总览</h3>
+      <p class="lead">控制台对标 Twilio Segment 信息架构：连接 → 统一 → 对象 → 客户 → 触达 → 协议 → 隐私 → 监控，并扩展知识库 / 应用 / 分析 / 语义层 / 智能助手。<span class="b real">真实</span>=走 SQL Engine→MySQL 实时；<span class="b mock">Mock</span>=前端演示。</p>
+    </section>
+    <section>
+      <h3>① 连接 Connections · 数据进出 <span class="b real">真实</span></h3>
+      <div class="cards">
+<div class="card"><h5><span class="ico">🔌</span><a href="01-connections.html">数据源 / 目录</a></h5><p>44 个连接器建源；CSV/粘贴可视化 ETL → 字段映射 → 导入对象</p></div>
+<div class="card"><h5><span class="ico">🧩</span><a href="01-connections.html">可视化编排 / 管道</a></h5><p>拖拽节点连线存为管道；执行经真实 Apache Airflow 调度</p></div>
+<div class="card"><h5><span class="ico">🏬</span><a href="01-connections.html">数据仓库 / Reverse ETL</a></h5><p>连数仓同步；以数仓为源回流任务（run-now + 记录）</p></div>
+<div class="card"><h5><span class="ico">📤</span><a href="01-connections.html">目的地 / Functions</a></h5><p>下游激活目录；自定义代码转换数据（Mock）</p></div>
+      </div>
+    </section>    <section>
+      <h3>② 统一 Unify · OneID 画像 <span class="b real">真实</span></h3>
+      <div class="cards">
+<div class="card"><h5><span class="ico">🧬</span><a href="02-unify.html">用户档案 Profiles</a></h5><p>按标识符/属性检索 distinct OneID 用户宽表</p></div>
+<div class="card"><h5><span class="ico">🏷️</span><a href="02-unify.html">计算特征 Traits</a></h5><p>标签体系与覆盖人数（来自 /tags）</p></div>
+<div class="card"><h5><span class="ico">🔗</span><a href="02-unify.html">身份解析</a></h5><p>channel→OneID 合并规则（唯一性/上限/策略）</p></div>
+<div class="card"><h5><span class="ico">🔮</span><a href="02-unify.html">SQL 特征 / 预测 / 同步</a></h5><p>自定义 SQL 特征、购买/流失/LTV、档案回流数仓</p></div>
+      </div>
+    </section>    <section>
+      <h3>③ 对象 & 客户 Objects / Accounts <span class="b real">真实</span></h3>
+      <div class="cards">
+<div class="card"><h5><span class="ico">🗃️</span><a href="03-objects.html">对象模型</a></h5><p>User/Lead/Account/Product/Store/Order + 关系矩阵（单一事实来源）</p></div>
+<div class="card"><h5><span class="ico">🔢</span><a href="03-objects.html">对象记录</a></h5><p>ER 图 + 每对象记录列表；门店/产品/订单主数据</p></div>
+<div class="card"><h5><span class="ico">🏢</span><a href="04-accounts.html">客户 Accounts</a></h5><p>B2B 客户主数据、客户级画像与层级</p></div>
+      </div>
+    </section>    <section>
+      <h3>④ 触达 Engage · 圈人与激活</h3>
+      <div class="cards">
+<div class="card"><h5><span class="ico">🎯</span><a href="05-engage.html">创建受众</a></h5><p>统一筛选器：多条件/AND·OR/跨对象多跳/自然语言；预估+SQL 预览</p></div>
+<div class="card"><h5><span class="ico">👥</span><a href="05-engage.html">受众 Audiences</a></h5><p>已保存人群包列表（来自 /segments）</p></div>
+<div class="card"><h5><span class="ico">🛣️</span><a href="05-engage.html">旅程 Journeys</a></h5><p>多步自动化旅程与转化（Mock）</p></div>
+<div class="card"><h5><span class="ico">📢</span><a href="05-engage.html">群发 Broadcasts</a></h5><p>一次性 Push/短信/EDM 触达（Mock）</p></div>
+      </div>
+    </section>    <section>
+      <h3>⑤ 治理 / 合规 / 监控 <span class="b mock">Mock</span></h3>
+      <div class="cards">
+<div class="card"><h5><span class="ico">📋</span><a href="06-protocols.html">协议 Protocols</a></h5><p>埋点计划 Schema 校验、违规、入库前转换</p></div>
+<div class="card"><h5><span class="ico">🔒</span><a href="07-privacy.html">隐私 Privacy</a></h5><p>PII 检测、同意管理、GDPR 删除与抑制</p></div>
+<div class="card"><h5><span class="ico">📈</span><a href="08-monitor.html">监控 Monitor</a></h5><p>投递概览/成功率/P95、告警、事件日志</p></div>
+      </div>
+    </section>    <section>
+      <h3>⑥ 扩展菜单 · 知识库 / 应用 / 分析 <span class="b real">真实</span></h3>
+      <div class="cards">
+<div class="card"><h5><span class="ico">📚</span><a href="10-knowledge.html">知识库 Knowledge</a></h5><p>云盘式多模态文件存储，可关联到对象记录</p></div>
+<div class="card"><h5><span class="ico">🛒</span><a href="11-apps.html">应用 Apps</a></h5><p>应用市场：CRM / 广告 / 消息 / 分析，按租户持久化</p></div>
+<div class="card"><h5><span class="ico">📊</span><a href="12-analyst.html">分析 Analyst</a></h5><p>NL 一句话生成看板/图表 + 图表下钻</p></div>
+      </div>
+    </section>    <section>
+      <h3>⑦ 智能 & 语义</h3>
+      <div class="cards">
+<div class="card"><h5><span class="ico">✦</span><a href="assistant.html">智能助手 Assistant</a></h5><p>多智能体：数据查询(MCP)/分析/任务/导航 + 主动式 Copilot</p></div>
+<div class="card"><h5><span class="ico">✺</span><a href="semantic.html">语义层 Semantic</a></h5><p>DB×KB 双源融合：Entity Hub / 属性联邦 / 归因链</p></div>
+      </div>
+    </section>    <section>
+      <h3>⑧ 平台底座 · 登录 / 设置</h3>
+      <div class="cards">
+<div class="card"><h5><span class="ico">🔐</span><a href="auth.html">登录门禁 Auth</a></h5><p>强制登录，团队成员即账号，挂在 workspace 下</p></div>
+<div class="card"><h5><span class="ico">⚙️</span><a href="09-settings.html">设置 / IAM</a></h5><p>工作区、成员/角色/团队、API 令牌、审计、MCP、租户治理</p></div>
+<div class="card"><h5><span class="ico">⌨</span><a href="api.html">API & 数据表</a></h5><p>254+ 接口完整目录 + 调用约定 + 核心表</p></div>
+      </div>
     </section>
     <div class="pager">
       <a href="install.html"><span class="dir">← 上一页</span>安装与使用</a>
