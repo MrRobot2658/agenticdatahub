@@ -25,3 +25,18 @@ export async function getSchedulerRuns(limit = 20): Promise<SchedulerRuns> {
   const { data } = await http.get(`/connections/scheduler/runs`, { params: { limit } });
   return data;
 }
+
+export interface TaskInstance {
+  task_id: string;
+  state: string | null;
+  map_index: number;
+  try_number?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  duration?: number | null;
+}
+
+export async function getRunTasks(runId: string, dagId?: string): Promise<TaskInstance[]> {
+  const { data } = await http.get(`/connections/scheduler/run-tasks`, { params: { run_id: runId, dag_id: dagId } });
+  return data.tasks || [];
+}

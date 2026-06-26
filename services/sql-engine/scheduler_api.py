@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import time
+from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter
@@ -90,6 +91,24 @@ class AirflowClient:
         j = r.json()
         return {"dag_run_id": j.get("dag_run_id", run_id), "state": j.get("state")}
 
+    def task_instances(self, dag_id: str, run_id: str) -> list:
+        """某次 DAG run 的任务实例（含动态映射的 run_node × N）。"""
+        rid = quote(run_id, safe="")
+        with self._client() as c:
+            r = c.get(f"{AIRFLOW_API}/dags/{dag_id}/dagRuns/{rid}/taskInstances")
+        if r.status_code != 200:
+            return []
+        out = []
+        for ti in (r.json().get("task_instances") or []):
+            out.append({
+                "task_id": ti.get("task_id"), "state": ti.get("state"),
+                "map_index": ti.get("map_index", -1), "try_number": ti.get("try_number"),
+                "start_date": ti.get("start_date"), "end_date": ti.get("end_date"),
+                "duration": ti.get("duration"),
+            })
+        out.sort(key=lambda t: (t["task_id"], t["map_index"]))
+        return out
+
     def last_runs(self, dag_id: str, limit: int = 5) -> list:
         with self._client() as c:
             r = c.get(f"{AIRFLOW_API}/dags/{dag_id}/dagRuns",
@@ -136,6 +155,15 @@ def scheduler_runs(limit: int = 20):
     except Exception as e:  # noqa: BLE001
         out.update({"reachable": False, "error": str(e)})
     return out
+
+
+@router.get("/scheduler/run-tasks")
+def scheduler_run_tasks(run_id: str, dag_id: str | None = None):
+    """某次运行的任务实例（页面内展示 Airflow 任务，无需跳转）。"""
+    try:
+        return {"run_id": run_id, "tasks": _client.task_instances(dag_id or AIRFLOW_DAG_ID, run_id)}
+    except Exception as e:  # noqa: BLE001
+        return {"run_id": run_id, "tasks": [], "error": str(e)}
 
 
 @router.get("/pipelines/{pipeline_id}/runs")
