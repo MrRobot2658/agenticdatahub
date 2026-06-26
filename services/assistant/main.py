@@ -151,6 +151,8 @@ AGENT_SYSTEM: dict[str, str] = {
         "看某个用户→show_profile(one_id)；圈人群/想知道某人群规模→show_audience(query)；"
         "看某类对象的记录列表→show_table(object, query)。"
         "只有当用户问的是必须用文字回答的具体事实（如精确计数、对比、解释字段含义）时，才用 cdp_* 只读工具查询后用文字作答。"
+        "【指标/口径】问某业务指标的取值/口径/怎么算（退款率/GMV/客单价/支付率/线索合格率等）→ 用 explain_metric(query)，"
+        "回答时给出「取值 + 口径(定义) + 公式」，若有关联知识文档(knowledge)也一并提及。"
         "【写操作】用户说「把这批人/这个人群**存为/保存为**受众叫X」→ 调用 save_audience(name=X, query=人群描述)；"
         "用户说「把…**纳入/移出上下文**（知识库）」→ 调用 curate_knowledge(query=关键词, in_context=true/false)。"
         "save_audience 返回 need_clarification 时，把澄清问题转述给用户，不要硬存。"
@@ -344,7 +346,14 @@ CURATE_KNOWLEDGE_TOOL = {"type": "function", "function": {
         "in_context": {"type": "boolean", "description": "true=纳入上下文，false=移出。默认 true"},
     }, "required": ["query"]},
 }}
-WRITE_TOOLS = [SAVE_AUDIENCE_TOOL, CURATE_KNOWLEDGE_TOOL]
+EXPLAIN_METRIC_TOOL = {"type": "function", "function": {
+    "name": "explain_metric",
+    "description": "查询某业务指标的实时取值 + 口径(定义) + 计算公式 + 关联知识库文档（语义层）。用户问「X 是多少 / X 的口径 / X 怎么算」(如 退款率 / GMV / 客单价 / 支付率 / 线索合格率) 时调用。",
+    "parameters": {"type": "object", "properties": {
+        "query": {"type": "string", "description": "指标名或中文，如 退款率 / gmv / 客单价"},
+    }, "required": ["query"]},
+}}
+WRITE_TOOLS = [SAVE_AUDIENCE_TOOL, CURATE_KNOWLEDGE_TOOL, EXPLAIN_METRIC_TOOL]
 
 
 def _agent_tools(agent: str) -> list[dict]:
@@ -373,6 +382,9 @@ def _local_exec(name: str, args: dict, tid: int):
         return r, {}
     if name == "curate_knowledge":
         r = curate_knowledge_handler(tid, args.get("query", ""), args.get("in_context", True))
+        return r, {}
+    if name == "explain_metric":
+        r = explain_metric_handler(tid, args.get("query", ""))
         return r, {}
     if name == "open_page":
         path = (args.get("path") or "").strip()
@@ -452,6 +464,12 @@ def save_audience_handler(tenant_id: int, name: str, query: str) -> dict:
         est = est.get("count")
     return {"saved": True, "segment_code": code, "segment_name": name or "未命名受众",
             "estimate": est, "echo": draft.get("echo")}
+
+
+def explain_metric_handler(tenant_id: int, query: str) -> dict:
+    with httpx.Client(timeout=30.0, trust_env=False, headers=SQL_HEADERS) as c:
+        return c.get(f"{SQL_ENGINE_URL}/semantic/explain",
+                     params={"tenant_id": tenant_id, "q": query}).json()
 
 
 def curate_knowledge_handler(tenant_id: int, query: str, in_context: bool = True) -> dict:

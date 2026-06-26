@@ -28,3 +28,15 @@ def metrics_values(
         return _svc.compute_metrics(tenant_id, selected)
     except SemanticError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/explain", summary="指标语义上下文：取值 + 口径 + 公式 + 关联知识")
+def metric_explain(
+    tenant_id: int = Query(..., description="租户 ID"),
+    q: str = Query(..., description="指标名或中文（如 退款率 / gmv / 客单价）"),
+):
+    """数据×语义结合：返回一个指标的实时取值 + 业务口径(definition) + 计算公式 + 关联知识库文档。"""
+    try:
+        return _svc.explain(tenant_id, q)
+    except SemanticError as e:
+        raise HTTPException(status_code=400, detail=str(e))
