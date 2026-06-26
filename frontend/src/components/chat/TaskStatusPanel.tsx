@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX } from "react";
 import {
-  Workflow, RefreshCw, Database, Layers, Activity, ChevronDown, Boxes, LogIn, LogOut,
+  Database, RefreshCw, Layers, ChevronDown, Boxes,
 } from "lucide-react";
 import { getInfraStats, type InfraStats, type ObjectStat, type AppStat } from "../../api/platform";
 import { useLang } from "../../context/LangContext";
@@ -10,7 +10,7 @@ import { useChatAction } from "../../context/ChatActionContext";
 const POLL_MS = 8000;
 
 // 明细名单（表名 / 流）。undefined=加载中，null=不可达，[]=暂无
-function NameList({ names }: { names: string[] | null | undefined }) {
+export function NameList({ names }: { names: string[] | null | undefined }) {
   const { tr } = useLang();
   if (names === undefined) return <div className="px-1 py-3 text-center text-[11px] text-gray-400">{tr("加载中…", "Loading…")}</div>;
   if (names === null) return <div className="px-1 py-3 text-center text-[11px] text-gray-400">{tr("服务暂不可达", "Service unreachable")}</div>;
@@ -42,7 +42,7 @@ function ObjectCountList({ objects }: { objects: ObjectStat[] | undefined }) {
 }
 
 // 上/下游应用明细。点击某个应用 → 进入对话，让 agent 引导用户填信息完成接入。
-function AppList({ apps, kind }: { apps: AppStat[] | undefined; kind: "upstream" | "downstream" }) {
+export function AppList({ apps, kind }: { apps: AppStat[] | undefined; kind: "upstream" | "downstream" }) {
   const { tr } = useLang();
   const { ask } = useChatAction();
   if (apps === undefined) return <div className="px-1 py-3 text-center text-[11px] text-gray-400">{tr("加载中…", "Loading…")}</div>;
@@ -86,23 +86,20 @@ export default function TaskStatusPanel() {
 
   const fmt = (n: number | null | undefined) => (n === null || n === undefined ? "—" : String(n));
 
-  // 数据源：上游应用 · 数据源表 · Flink · Doris · 对象 · 下游应用（队列/任务已拆为独立 tab）
-  type InfraItem = { key: string; icon: JSX.Element; label: string; val: string; names?: string[] | null; objects?: ObjectStat[]; apps?: AppStat[] };
+  // 数据源（只保留数据库）：业务库 · 数仓 · 对象（应用→应用 tab，Flink→实时链路 tab，队列/任务独立 tab）
+  type InfraItem = { key: string; icon: JSX.Element; label: string; val: string; names?: string[] | null; objects?: ObjectStat[] };
   const items: InfraItem[] = [
-    { key: "upstream", icon: <LogIn className="h-4 w-4 text-cyan-600" />, label: tr("上游应用", "Upstream apps"), val: fmt(stats?.upstream_apps), apps: stats?.upstream },
-    { key: "mysql", icon: <Database className="h-4 w-4 text-sky-600" />, label: tr("业务库表", "Source tables"), val: fmt(stats?.mysql_tables), names: stats?.mysql_table_names },
-    { key: "flink", icon: <Activity className="h-4 w-4 text-emerald-600" />, label: tr("Flink 任务数", "Flink jobs"), val: fmt(stats?.flink_jobs), names: stats?.flink_streams },
+    { key: "mysql", icon: <Database className="h-4 w-4 text-sky-600" />, label: tr("业务库表（MySQL）", "Business DB tables"), val: fmt(stats?.mysql_tables), names: stats?.mysql_table_names },
     { key: "doris", icon: <Layers className="h-4 w-4 text-violet-600" />, label: tr("数仓表（Doris）", "Doris tables"), val: fmt(stats?.doris_tables), names: stats?.doris_table_names },
     { key: "objects", icon: <Boxes className="h-4 w-4 text-rose-600" />, label: tr("对象", "Objects"), val: fmt(stats?.object_types), objects: stats?.objects },
-    { key: "downstream", icon: <LogOut className="h-4 w-4 text-fuchsia-600" />, label: tr("下游应用", "Downstream apps"), val: fmt(stats?.downstream_apps), apps: stats?.downstream },
   ];
 
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-2 pb-2">
-        <Workflow className="h-4 w-4 text-brand-600" />
+        <Database className="h-4 w-4 text-brand-600" />
         <div className="flex-1">
-          <div className="text-sm font-semibold text-gray-900">{tr("数据源（数据链路 / 数仓 / 业务库）", "Data Sources")}</div>
+          <div className="text-sm font-semibold text-gray-900">{tr("数据源（数据库：业务库 / 数仓）", "Data Sources (Databases)")}</div>
           <div className="text-[11px] text-gray-400">{tr("点击数字查看详情", "Click a number for details")}</div>
         </div>
         <button type="button" onClick={load} className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title={tr("刷新", "Refresh")}>
@@ -129,8 +126,6 @@ export default function TaskStatusPanel() {
                 <div className="border-t border-gray-100 bg-white px-2 py-1.5">
                   {it.key === "objects" ? (
                     <ObjectCountList objects={it.objects} />
-                  ) : it.key === "upstream" || it.key === "downstream" ? (
-                    <AppList apps={it.apps} kind={it.key as "upstream" | "downstream"} />
                   ) : (
                     <NameList names={it.names} />
                   )}

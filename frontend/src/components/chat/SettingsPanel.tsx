@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Brain, Boxes, Plug, Gauge, Check, Database, Library, Radio, CalendarClock } from "lucide-react";
+import { X, Brain, Boxes, Plug, Gauge, Check, Database, Library, Radio, CalendarClock, Grid3x3, Activity } from "lucide-react";
 import { getMcpTools, getAgents, type McpToolsResponse, type AgentDef } from "../../api/assistant";
 import { getMemory, setMemory, getDisabledSkills, toggleSkill, getUsage, resetSessionUsage, type Usage } from "../../lib/prefs";
 import { useLang } from "../../context/LangContext";
@@ -7,8 +7,10 @@ import TaskStatusPanel from "./TaskStatusPanel";
 import KnowledgePanel from "./KnowledgePanel";
 import QueuePanel from "./QueuePanel";
 import TasksPanel from "./TasksPanel";
+import AppsPanel from "./AppsPanel";
+import PipelinePanel from "./PipelinePanel";
 
-type Tab = "data" | "queue" | "tasks" | "kb" | "memory" | "skills" | "mcp" | "usage";
+type Tab = "data" | "apps" | "pipeline" | "queue" | "tasks" | "kb" | "memory" | "skills" | "mcp" | "usage";
 
 export default function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { tr } = useLang();
@@ -49,6 +51,8 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
 
   const tabs: { key: Tab; label: string; icon: typeof Brain }[] = [
     { key: "data", label: tr("数据源", "Data sources"), icon: Database },
+    { key: "apps", label: tr("应用", "Apps"), icon: Grid3x3 },
+    { key: "pipeline", label: tr("实时链路", "Pipeline"), icon: Activity },
     { key: "queue", label: tr("队列", "Queues"), icon: Radio },
     { key: "tasks", label: tr("任务", "Tasks"), icon: CalendarClock },
     { key: "kb", label: tr("知识库", "Knowledge"), icon: Library },
@@ -81,6 +85,8 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
           </div>
           <div className="flex-1 overflow-y-auto p-4">
             {tab === "data" && <TaskStatusPanel />}
+            {tab === "apps" && <AppsPanel />}
+            {tab === "pipeline" && <PipelinePanel />}
             {tab === "queue" && <QueuePanel />}
             {tab === "tasks" && <TasksPanel />}
             {tab === "kb" && <KnowledgePanel />}
