@@ -155,6 +155,8 @@ AGENT_SYSTEM: dict[str, str] = {
         "回答时给出「取值 + 口径(定义) + 公式」，若有关联知识文档(knowledge)也一并提及。"
         "【实体上下文】用户想要某个客户/用户的「完整情况/背景/上下文」或围绕某实体做分析 → 用 entity_context(object, id) "
         "取「数据+关联对象+关联知识」整包，再据此综合作答。"
+        "【归因链/关系链】用户想「走一条归因链 / 顺着关系链分析 / 看 X 关联到什么」→ 用 relation_chain(object, id) "
+        "得到跨链图，按 实体→关联实体→… 串成链路叙述，并点出沿途的关联知识文档。"
         "【写操作】用户说「把这批人/这个人群**存为/保存为**受众叫X」→ 调用 save_audience(name=X, query=人群描述)；"
         "用户说「把…**纳入/移出上下文**（知识库）」→ 调用 curate_knowledge(query=关键词, in_context=true/false)。"
         "save_audience 返回 need_clarification 时，把澄清问题转述给用户，不要硬存。"
@@ -363,7 +365,17 @@ ENTITY_CONTEXT_TOOL = {"type": "function", "function": {
         "id": {"type": "string", "description": "对象主键值，如 A3001 或 OneID"},
     }, "required": ["object", "id"]},
 }}
-WRITE_TOOLS = [SAVE_AUDIENCE_TOOL, CURATE_KNOWLEDGE_TOOL, EXPLAIN_METRIC_TOOL, ENTITY_CONTEXT_TOOL]
+RELATION_CHAIN_TOOL = {"type": "function", "function": {
+    "name": "relation_chain",
+    "description": "从一个实体出发沿关系图多跳遍历，得到「实体→关联实体→…」的跨链图，每节点带关联知识库文档（归因链/关系跨链）。用户想「走一条归因链 / 看 X 关联了什么 / 顺着关系链分析」时调用。",
+    "parameters": {"type": "object", "properties": {
+        "object": {"type": "string", "description": "起点对象类型：user/account/order/lead/product/store"},
+        "id": {"type": "string", "description": "起点主键值，如 A3001"},
+        "max_hops": {"type": "integer", "description": "最大跳数，默认 3"},
+    }, "required": ["object", "id"]},
+}}
+WRITE_TOOLS = [SAVE_AUDIENCE_TOOL, CURATE_KNOWLEDGE_TOOL, EXPLAIN_METRIC_TOOL,
+               ENTITY_CONTEXT_TOOL, RELATION_CHAIN_TOOL]
 
 
 def _agent_tools(agent: str) -> list[dict]:
@@ -398,6 +410,10 @@ def _local_exec(name: str, args: dict, tid: int):
         return r, {}
     if name == "entity_context":
         r = entity_context_handler(tid, args.get("object", ""), str(args.get("id", "")))
+        return r, {}
+    if name == "relation_chain":
+        r = relation_chain_handler(tid, args.get("object", ""), str(args.get("id", "")),
+                                   int(args.get("max_hops", 3) or 3))
         return r, {}
     if name == "open_page":
         path = (args.get("path") or "").strip()
@@ -489,6 +505,12 @@ def entity_context_handler(tenant_id: int, obj: str, id_: str) -> dict:
     with httpx.Client(timeout=30.0, trust_env=False, headers=SQL_HEADERS) as c:
         return c.get(f"{SQL_ENGINE_URL}/semantic/entity",
                      params={"tenant_id": tenant_id, "object": obj, "id": id_}).json()
+
+
+def relation_chain_handler(tenant_id: int, obj: str, id_: str, max_hops: int = 3) -> dict:
+    with httpx.Client(timeout=30.0, trust_env=False, headers=SQL_HEADERS) as c:
+        return c.get(f"{SQL_ENGINE_URL}/semantic/chain",
+                     params={"tenant_id": tenant_id, "object": obj, "id": id_, "max_hops": max_hops}).json()
 
 
 def curate_knowledge_handler(tenant_id: int, query: str, in_context: bool = True) -> dict:
