@@ -22,3 +22,11 @@ export async function listKbFiles(tenantId: number): Promise<KbFile[]> {
 export async function setKbContext(tenantId: number, fid: string, inContext: boolean): Promise<void> {
   await http.post(`/kb/files/${fid}/context`, { tenant_id: tenantId, in_context: inContext });
 }
+
+export async function uploadKbFile(tenantId: number, file: File, folder = "/上传"): Promise<void> {
+  const fd = new FormData();
+  fd.append("tenant_id", String(tenantId));
+  fd.append("folder", folder || "/上传");
+  fd.append("file", file);
+  await http.post(`/kb/files`, fd);
+}

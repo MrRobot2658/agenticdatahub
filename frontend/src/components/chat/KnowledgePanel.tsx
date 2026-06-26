@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FileText, Image as ImageIcon, Video, Music, FileArchive, File as FileIcon,
-  FolderOpen, Folder, Star, Cpu, ChevronDown, RefreshCw, type LucideIcon,
+  FolderOpen, Folder, Star, Cpu, ChevronDown, RefreshCw, Upload, type LucideIcon,
 } from "lucide-react";
 import { useLang } from "../../context/LangContext";
 import { useTenant } from "../../context/TenantContext";
-import { listKbFiles, setKbContext, type KbFile, type KbKind } from "../../api/kb";
+import { listKbFiles, setKbContext, uploadKbFile, type KbFile, type KbKind } from "../../api/kb";
 
 /**
  * 知识库面板 —— 按「卡帕西 LLM 知识库管理模式」构建（接真实 kb_api）：
@@ -43,6 +43,22 @@ export default function KnowledgePanel() {
   const [loading, setLoading] = useState(false);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<Set<string>>(new Set());
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files || []);
+    if (e.target) e.target.value = "";
+    if (!picked.length) return;
+    const folder = (window.prompt(tr("放入哪个文件夹？（如 /产品知识）", "Folder? (e.g. /Product)"), "/上传") || "/上传").trim() || "/上传";
+    setUploading(true);
+    try {
+      for (const f of picked) await uploadKbFile(tenant, f, folder);
+      await load();
+      setOpenFolders((s) => new Set(s).add(folder));
+    } catch { /* ignore */ }
+    finally { setUploading(false); }
+  }
 
   async function load() {
     setLoading(true);
@@ -113,6 +129,11 @@ export default function KnowledgePanel() {
         <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
           {folders.length} {tr("域", "domains")} · {totalFiles} {tr("文件", "files")}
         </span>
+        <input ref={fileRef} type="file" multiple className="hidden" onChange={onUpload} />
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+          className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-brand-600 disabled:opacity-40" title={tr("上传文件", "Upload")}>
+          <Upload className={`h-3.5 w-3.5 ${uploading ? "animate-pulse" : ""}`} />
+        </button>
         <button type="button" onClick={load} className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title={tr("刷新", "Refresh")}>
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
         </button>
