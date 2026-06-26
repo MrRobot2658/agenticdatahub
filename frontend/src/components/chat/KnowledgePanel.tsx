@@ -6,6 +6,7 @@ import {
 import { useLang } from "../../context/LangContext";
 import { useTenant } from "../../context/TenantContext";
 import { listKbFiles, setKbContext, uploadKbFile, type KbFile, type KbKind } from "../../api/kb";
+import KbFileModal from "./KbFileModal";
 
 /**
  * 知识库面板 —— 按「卡帕西 LLM 知识库管理模式」构建（接真实 kb_api）：
@@ -44,6 +45,7 @@ export default function KnowledgePanel() {
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
+  const [detailFid, setDetailFid] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -197,7 +199,8 @@ export default function KnowledgePanel() {
                     return (
                       <div key={it.id} className="group flex items-center gap-1.5 rounded px-1.5 py-1 hover:bg-gray-50">
                         <Icon className={`h-3.5 w-3.5 shrink-0 ${KIND_CLS[it.kind] || "text-gray-500"}`} />
-                        <span className="flex-1 truncate text-[11.5px] text-gray-600" title={it.name}>{it.name}</span>
+                        <button type="button" onClick={() => setDetailFid(it.id)}
+                          className="flex-1 truncate text-left text-[11.5px] text-gray-600 hover:text-brand-600" title={tr("查看详情", "View details")}>{it.name}</button>
                         <span className="shrink-0 text-[9.5px] tabular-nums text-gray-300">{fmtSize(it.size_bytes)}</span>
                         <span className="w-9 shrink-0 text-right font-mono text-[9.5px] tabular-nums text-gray-400">{fmtTok(it.token_estimate)}</span>
                         <button type="button" disabled={isBusy} onClick={() => toggleItem(it)}
@@ -214,6 +217,8 @@ export default function KnowledgePanel() {
           );
         })}
       </div>
+
+      <KbFileModal open={!!detailFid} fid={detailFid} onClose={() => setDetailFid(null)} onChanged={load} />
     </div>
   );
 }

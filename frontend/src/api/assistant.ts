@@ -40,7 +40,8 @@ export type ChatView =
   | { type: "profile"; one_id: number | string }
   | { type: "audience"; query: string }
   | { type: "table"; object: string; query?: string }
-  | { type: "chart"; question: string };
+  | { type: "chart"; question: string }
+  | { type: "chain"; object: string; id: string; max_hops?: number };
 
 export interface ChatResponse {
   reply: string;

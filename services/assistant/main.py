@@ -412,9 +412,10 @@ def _local_exec(name: str, args: dict, tid: int):
         r = entity_context_handler(tid, args.get("object", ""), str(args.get("id", "")))
         return r, {}
     if name == "relation_chain":
-        r = relation_chain_handler(tid, args.get("object", ""), str(args.get("id", "")),
-                                   int(args.get("max_hops", 3) or 3))
-        return r, {}
+        obj, id_ = args.get("object", ""), str(args.get("id", ""))
+        hops = int(args.get("max_hops", 3) or 3)
+        r = relation_chain_handler(tid, obj, id_, hops)
+        return r, {"view": {"type": "chain", "object": obj, "id": id_, "max_hops": hops}}
     if name == "open_page":
         path = (args.get("path") or "").strip()
         if path in PAGE_INDEX:

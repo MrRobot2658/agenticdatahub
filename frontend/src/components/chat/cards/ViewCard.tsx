@@ -3,6 +3,7 @@ import ProfileCard from "./ProfileCard";
 import AudienceCard from "./AudienceCard";
 import TableCard from "./TableCard";
 import ChartCard from "./ChartCard";
+import ChainCard from "./ChainCard";
 
 // 渲染指令分发：把 agent 返回的 view 映射到对应内联卡片。
 export default function ViewCard({ view }: { view: ChatView }) {
@@ -11,6 +12,7 @@ export default function ViewCard({ view }: { view: ChatView }) {
     case "audience": return <AudienceCard query={view.query} />;
     case "table": return <TableCard object={view.object} query={view.query} />;
     case "chart": return <ChartCard question={view.question} />;
+    case "chain": return <ChainCard object={view.object} id={view.id} maxHops={view.max_hops} />;
     default: return null;
   }
 }
