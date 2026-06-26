@@ -55,6 +55,7 @@
     <section>
       <h3>案例 1 · DTC 电商：退款率异常的一键归因</h3>
       <div class="meta" style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px"><span class="pill">语义层</span><span class="pill">归因链</span><span class="pill">知识库</span></div>
+      <figure class="fig"><img src="assets/shots/sc1.png" alt="DTC 电商：退款率异常的一键归因" loading="lazy"><figcaption>案例 1 · DTC 电商：退款率异常的一键归因</figcaption></figure>
       <p><b>痛点</b> · 退款率从 3% 跳到 8%，数据平台只给出数字，要花两小时翻订单/客服/质检/供应商才能拼出原因。</p>
       <p><b>方案</b></p>
       <ul><li>用<a href="05-engage.html">自然语言</a>问「上周退款率为什么升高」，Agent 识别为定量+定性混合问题；</li><li><a href="semantic.html">语义层</a> Entity Hub 定位 <code>orders.status=refunded</code> 数据集 + 行业基准知识文档；</li><li>DB 侧采集：8.2%（3 倍）、78% 来自 SKU FUR-2026-WINTER、质量问题集中在 B202603 批次；</li><li>KB 侧关联：B202603 质检报告「色泽不均」、供应商 A 投诉率 +300%；</li><li>沿统一关系图构建归因链：供应商→批次→SKU→新客退款。</li></ul>
@@ -63,6 +64,7 @@
     </section>    <section>
       <h3>案例 2 · 连锁零售：跨渠道 OneID 打通后再精准圈人</h3>
       <div class="meta" style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px"><span class="pill">OneID</span><span class="pill">ID-Mapping</span><span class="pill">圈人</span></div>
+      <figure class="fig"><img src="assets/shots/sc2.png" alt="连锁零售：跨渠道 OneID 打通后再精准圈人" loading="lazy"><figcaption>案例 2 · 连锁零售：跨渠道 OneID 打通后再精准圈人</figcaption></figure>
       <p><b>痛点</b> · 同一个人在小程序、企微、App、门店 POS 各有一套 ID，数据割裂，无法精准触达。</p>
       <p><b>方案</b></p>
       <ul><li>多渠道事件经 <a href="02-unify.html">ID-Mapping</a> 实时归并为一个 OneID（微信 openid/unionid、企微 extid、手机号、设备）；</li><li>热映射写 Redis（&lt;5ms），审计与画像落 MySQL；</li><li>在 <a href="05-engage.html">创建受众</a> 用统一筛选器跨渠道圈人，实时预估人数。</li></ul>
@@ -71,6 +73,7 @@
     </section>    <section>
       <h3>案例 3 · 市场运营：一句话圈人 + 群发激活</h3>
       <div class="meta" style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px"><span class="pill">NL 圈人</span><span class="pill">DSL 校验</span><span class="pill">激活</span></div>
+      <figure class="fig"><img src="assets/shots/05-chat.png" alt="市场运营：一句话圈人 + 群发激活" loading="lazy"><figcaption>案例 3 · 市场运营：一句话圈人 + 群发激活</figcaption></figure>
       <p><b>痛点</b> · 市场同学不会写 SQL，每次圈人都要排期找数据团队，活动响应慢。</p>
       <p><b>方案</b></p>
       <ul><li>在创建受众里中文描述「近 30 天下过单且客单价&gt;500 的华东用户」；</li><li>Agent 生成候选 <b>DSL</b>，必经 <a href="architecture.html">dsl.py 校验层</a>（字段/操作符/关系/跳数），<b>绝不直出 SQL</b>；</li><li>预览 SQL + 预估人数，满意后存为受众，连接<a href="11-apps.html">应用</a>激活到短信/企微。</li></ul>
@@ -79,6 +82,7 @@
     </section>    <section>
       <h3>案例 4 · 数据团队：多源数据接入并打宽成统一画像</h3>
       <div class="meta" style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px"><span class="pill">44 连接器</span><span class="pill">可视化 ETL</span><span class="pill">Airflow</span></div>
+      <figure class="fig"><img src="assets/shots/sc4.png" alt="数据团队：多源数据接入并打宽成统一画像" loading="lazy"><figcaption>案例 4 · 数据团队：多源数据接入并打宽成统一画像</figcaption></figure>
       <p><b>痛点</b> · 数据散落在 MySQL、数仓、Kafka、CSV 各处，接入和清洗全靠手写脚本，难维护。</p>
       <p><b>方案</b></p>
       <ul><li>从 <a href="01-connections.html">数据源目录</a>（44 连接器）建源，或 CSV/粘贴走可视化 ETL；</li><li>字段映射→预览→导入到目标对象，可同时建对象关系；</li><li>用「可视化编排」拖拽节点保存为管道，「管道」页执行经 <b>真实 Apache Airflow</b> 调度（动态任务映射）。</li></ul>
@@ -87,6 +91,7 @@
     </section>    <section>
       <h3>案例 5 · 业务负责人：一句话生成看板自助分析</h3>
       <div class="meta" style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px"><span class="pill">NL 生成看板</span><span class="pill">图表下钻</span><span class="pill">安全聚合</span></div>
+      <figure class="fig"><img src="assets/shots/sc5.png" alt="业务负责人：一句话生成看板自助分析" loading="lazy"><figcaption>案例 5 · 业务负责人：一句话生成看板自助分析</figcaption></figure>
       <p><b>痛点</b> · 想看「订单 + 商品」的运营视图，但找人做看板要等好几天。</p>
       <p><b>方案</b></p>
       <ul><li>在 <a href="12-analyst.html">分析 › 看板列表</a>「新建看板」，描述「做一个电商运营看板，看订单和商品」；</li><li>DeepSeek 从<b>白名单数据源目录</b>受限选图（LLM 不写 SQL）直接生成；</li><li>进详情二次编辑（改标题/加减图表），点图表数据点下钻明细。</li></ul>
@@ -95,6 +100,7 @@
     </section>    <section>
       <h3>案例 6 · 客户成功：知识沉淀与客户档案关联</h3>
       <div class="meta" style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px"><span class="pill">知识库</span><span class="pill">多模态</span><span class="pill">对象关联</span></div>
+      <figure class="fig"><img src="assets/shots/04-knowledge.png" alt="客户成功：知识沉淀与客户档案关联" loading="lazy"><figcaption>案例 6 · 客户成功：知识沉淀与客户档案关联</figcaption></figure>
       <p><b>痛点</b> · 合同、质检报告、客服会话散落在网盘和邮件里，与客户记录对不上号。</p>
       <p><b>方案</b></p>
       <ul><li>在 <a href="10-knowledge.html">知识库</a>上传文档/图片/音视频（自动归类 + 缩略图）；</li><li>上传时或详情页把文件关联到对象记录（如 <code>account/A3001</code>）；</li><li>这些非结构化知识进而成为 <a href="semantic.html">语义层</a>的 KB 侧来源，支撑归因分析。</li></ul>
